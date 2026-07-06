@@ -3,12 +3,14 @@ import { z } from "zod";
 import { POKEHUB_PROJECT_TAG, withProjectTag } from "../lib/project-tag";
 import { createServiceSupabaseClient } from "../lib/supabase/server";
 
+// The Pokemon TCG API returns explicit null (not just missing) for price fields
+// that have no data, so every numeric price field must be nullish, not just optional.
 const PriceSchema = z.object({
-  low: z.number().optional(),
-  mid: z.number().optional(),
-  high: z.number().optional(),
-  market: z.number().optional(),
-  directLow: z.number().optional()
+  low: z.number().nullish(),
+  mid: z.number().nullish(),
+  high: z.number().nullish(),
+  market: z.number().nullish(),
+  directLow: z.number().nullish()
 });
 
 const CardSchema = z.object({
@@ -39,7 +41,7 @@ const CardSchema = z.object({
   cardmarket: z
     .object({
       updatedAt: z.string().optional(),
-      prices: z.record(z.number()).optional()
+      prices: z.record(z.number().nullish()).optional()
     })
     .optional()
 });
@@ -66,6 +68,10 @@ function getArgString(name: string, fallback: string) {
   const prefix = `--${name}=`;
   const match = process.argv.find((arg) => arg.startsWith(prefix));
   return match ? match.slice(prefix.length) : fallback;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function toCardRow(card: PokemonTcgCard) {
@@ -150,12 +156,26 @@ async function fetchCardsPage(page: number, pageSize: number, query: string) {
   );
   if (query) url.searchParams.set("q", query);
 
-  const response = await fetch(url, { headers });
-  if (!response.ok) {
-    throw new Error(`Pokemon TCG API failed: ${response.status} ${response.statusText}`);
-  }
+  const maxRetries = getArgNumber("maxRetries", 5);
+  let attempt = 0;
+  // Retry transient rate-limit (429) and server (5xx) responses with exponential backoff
+  // so a long keyless full-catalog crawl is not aborted by a single throttled page.
+  for (;;) {
+    const response = await fetch(url, { headers });
+    if (response.ok) {
+      return ApiResponseSchema.parse(await response.json());
+    }
 
-  return ApiResponseSchema.parse(await response.json());
+    const retryable = response.status === 429 || response.status >= 500;
+    if (!retryable || attempt >= maxRetries) {
+      throw new Error(`Pokemon TCG API failed: ${response.status} ${response.statusText}`);
+    }
+
+    attempt += 1;
+    const backoffMs = Math.min(30000, 1000 * 2 ** (attempt - 1));
+    console.log(`Page ${page}: HTTP ${response.status}, retry ${attempt}/${maxRetries} after ${backoffMs}ms.`);
+    await sleep(backoffMs);
+  }
 }
 
 export async function ingestPokemonTcgCards() {
@@ -163,6 +183,7 @@ export async function ingestPokemonTcgCards() {
   const pageSize = getArgNumber("pageSize", 50);
   const maxPages = getArgNumber("maxPages", 1);
   const query = getArgString("q", "");
+  const delayMs = getArgNumber("delayMs", 0);
 
   console.log(
     `Pokemon TCG API ingest starting for project_tag=${POKEHUB_PROJECT_TAG}; pageSize=${pageSize}; maxPages=${maxPages}.`
@@ -201,6 +222,10 @@ export async function ingestPokemonTcgCards() {
 
     if (payload.page * payload.pageSize >= payload.totalCount || payload.count === 0) {
       break;
+    }
+
+    if (delayMs > 0) {
+      await sleep(delayMs);
     }
   }
 
