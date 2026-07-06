@@ -90,6 +90,43 @@ export function dataConfidenceScore(input: DataConfidenceInput) {
   );
 }
 
+export function scoreSourceFreshness(hoursSinceObservation: number): number {
+  // 100 for a brand-new observation, linear decay to 0 at 168h (7 days).
+  return clampScore(100 - (hoursSinceObservation / 168) * 100);
+}
+
+export function scoreLiquidity(input: { activeListings?: number; soldCount?: number }): number {
+  const activeListings = input.activeListings ?? 0;
+  const soldCount = input.soldCount ?? 0;
+
+  return clampScore(0.45 * Math.min(100, activeListings * 2) + 0.55 * Math.min(100, soldCount * 5));
+}
+
+export function scoreSpreadRisk(input: { low?: number; high?: number; mid?: number }): number {
+  const { low, high, mid } = input;
+
+  if (
+    typeof low !== "number" ||
+    typeof high !== "number" ||
+    typeof mid !== "number" ||
+    !Number.isFinite(low) ||
+    !Number.isFinite(high) ||
+    !Number.isFinite(mid) ||
+    mid <= 0 ||
+    high < low
+  ) {
+    return 50;
+  }
+
+  // spreadRatio 0 scores 100; linear decay to 0 at ratio 1.5 or wider.
+  const spreadRatio = (high - low) / mid;
+  return clampScore(100 - (spreadRatio / 1.5) * 100);
+}
+
+export const scoreCardValueSignal: typeof cardValueSignalScore = cardValueSignalScore;
+export const scoreSealedProductSignal: typeof sealedProductSignalScore = sealedProductSignalScore;
+export const scoreDataConfidence: typeof dataConfidenceScore = dataConfidenceScore;
+
 function runExample() {
   console.log(
     "Example value signal:",

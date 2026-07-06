@@ -134,6 +134,7 @@ export function getEnvReadiness(): EnvReadiness {
     pokemonTcgApiKey: Boolean(process.env.POKEMON_TCG_API_KEY),
     priceChartingToken: Boolean(process.env.PRICECHARTING_TOKEN),
     ebayCredentials: Boolean(process.env.EBAY_CLIENT_ID && process.env.EBAY_CLIENT_SECRET),
+    ingestToken: Boolean(process.env.POKEHUB_INGEST_TOKEN),
     sharedDatabaseMode: true
   };
 }
