@@ -1,75 +1,33 @@
 # POKEHUB
 
-Pixelated Pokémon card market intelligence dashboard.
+## Overview
 
-POKEHUB is designed to standardize sealed product MSRP, individual card metadata, condition/grade information, marketplace snapshots, population signals, sales velocity, and value-risk scoring into one dashboard.
+POKEHUB is a 3D pixel-card market intelligence dashboard for the Pokemon TCG: sealed MSRP, card identity, raw and graded value signals, liquidity, sales velocity, and opportunity/risk scoring.
 
-> Status: repo scaffold. The app now supports shared Supabase database mode using `project_tag = 'POKE'`.
+It's styled as a GBA-era collector terminal opened in the back room of a card shop: pixel panels, CRT scanlines, neon rarity glow, CSS-3D floating/flipping cards, rarity chips, dense tables, and the UUPM label for the Unified Underground Price Monitor.
 
-## Core idea
+## Feature tour
 
-A card or sealed product should never be treated as "just a price." POKEHUB stores identity, condition, grade, rarity, set context, marketplace liquidity, spread, population, image confidence, source freshness, and comparable sales history as separate variables.
+- **Market Arcade** — headline stats (tracked products, MSRP basis, market estimate, snapshot count, source freshness, last sync) and a top-movers strip of floating cards.
+- **Sealed Product Dex** — sortable sealed-product table with MSRP, estimated market, above-MSRP %, velocity, reprint risk, and signal badges; mobile card grid with flip-to-detail.
+- **Card Value Lab** — searchable/filterable card table plus flip cards showing raw value, graded estimate, population, spread, liquidity, confidence, and signal score.
+- **Signal Radar** — nine opportunity/risk categories (under-MSRP, above-MSRP movers, high-spread traps, stale sources, grade arbitrage, character hype, low-pop grails, fast velocity, suspicious outliers).
+- **Portfolio** — owned quantity, acquisition cost, current estimate, signed unrealized gain/loss, and watch/hold/grade/sell/avoid status.
+- **Control Center** — live source-adapter status: enabled/disabled, credentials present, rate limits, last run/insert/update counts.
+- **Settings** — environment readiness booleans (Supabase, API keys, ingest token, shared-database mode) and a compact source-adapter summary.
 
-That lets the dashboard answer:
+## 3D card system
 
-- What is this item worth right now?
-- How far above MSRP is a sealed product trading?
-- Is the price real demand or thin-market noise?
-- Are listings plentiful but sales weak?
-- Is the card valuable because of rarity, playability, character demand, grade scarcity, sealed scarcity, or hype?
-- Which products are undervalued relative to their historical spread and velocity?
+Built entirely from `transform`/`opacity` CSS (`src/styles/globals.css`) driven by small hooks and components, no 3D library:
 
-## Shared database mode
+- `src/lib/use-tilt.ts` (`useTilt`) — pointer-driven `--tilt-x`/`--tilt-y` custom properties for card tilt.
+- `src/lib/use-count-up.ts` (`useCountUp`) — eased rAF count-up for stat values.
+- `src/lib/use-reduced-motion.ts` (`usePrefersReducedMotion`) — reads `prefers-reduced-motion`.
+- `src/components/three/CardStage.tsx`, `FloatingCard.tsx` (glow tiers `common`/`rare`/`ultra`/`secret`), `CardFlip.tsx`, `CardOrbitGrid.tsx` — perspective stage, idle-float glow cards, click/keyboard flip cards, and a staggered-entrance grid.
 
-POKEHUB can live inside the same Supabase/Postgres database as other projects.
+All motion respects `prefers-reduced-motion: reduce` — animations and transitions are disabled and cards render in their resting/flipped state instantly (see the reduced-motion block in `src/styles/globals.css`).
 
-Every POKEHUB-owned row is scoped with:
-
-```txt
-project_tag = POKE
-```
-
-This prevents Pokémon data from colliding with other app data in shared tables.
-
-Required environment variables:
-
-```env
-NEXT_PUBLIC_POKEHUB_PROJECT_TAG=POKE
-POKEHUB_PROJECT_TAG=POKE
-```
-
-Required query rule:
-
-```sql
-select * from sealed_products where project_tag = 'POKE';
-select * from cards where project_tag = 'POKE';
-select * from market_snapshots where project_tag = 'POKE';
-```
-
-The schema also creates POKEHUB-only views:
-
-- `poke_data_sources`
-- `poke_sealed_products`
-- `poke_cards`
-- `poke_market_snapshots`
-- `poke_value_scores`
-
-Use the views when you want the clean POKEHUB slice of the shared database.
-
-## Stack
-
-- Frontend: Next.js, TypeScript, Tailwind CSS
-- UI feel: pixelated game dashboard, CRT glow, 8-bit panels, rarity color chips
-- Charts: Recharts
-- Database: Supabase Postgres, shared-database compatible through `project_tag`
-- Workers: TypeScript ingestion scripts
-- Data sources:
-  - Pokémon TCG API for canonical card, set, image, legality, rarity, and TCGplayer/Cardmarket embedded fields
-  - PriceCharting for graded/current value snapshots where available
-  - eBay Browse API for active listing supply and listing-price signals
-  - Manual CSV imports for MSRP, local comps, PSA pop reports, collector notes, and sealed inventory
-
-## Quick start
+## Run locally
 
 ```bash
 npm install
@@ -77,139 +35,105 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open the app locally and import the MSRP seed file from `src/data/msrp-seed.json`.
+The homepage renders from `src/data/msrp-seed.json` and local mock card/portfolio data without external API keys or a database connection.
 
-## Supabase setup
+## Environment
 
-Run the shared database schema in Supabase SQL Editor:
+`.env.local` is never committed. All values below are optional — POKEHUB boots and renders fully in seed mode with zero keys set.
+
+| Variable | Used by | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | browser + server | Supabase project URL (public). |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser + server | Supabase anonymous key (public, read-only via RLS). |
+| `SUPABASE_SERVICE_ROLE_KEY` | server only | Enables writes/ingestion; never sent to the browser or returned by any API. |
+| `NEXT_PUBLIC_POKEHUB_PROJECT_TAG` / `POKEHUB_PROJECT_TAG` | client / server | Project tag for shared-table isolation; defaults to `POKE`. |
+| `POKEMON_TCG_API_KEY` | server | Optional; raises Pokemon TCG API rate limits. Works keyless. |
+| `PRICECHARTING_TOKEN` | server | Optional; enables the PriceCharting adapter. |
+| `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET` | server | Optional; enables the eBay Browse adapter (client-credentials grant). |
+| `POKEHUB_INGEST_TOKEN` | server | Shared secret required in the `x-pokehub-ingest-token` header for `POST /api/ingest/*` routes. |
+
+The browser client only ever reads `NEXT_PUBLIC_*` values. `SUPABASE_SERVICE_ROLE_KEY` and `POKEHUB_INGEST_TOKEN` must never appear in client code, and no API response ever renders a secret's value — only booleans indicating whether it is configured.
+
+## Shared database mode
+
+POKEHUB shares its Supabase/Postgres tables with other projects. Every POKEHUB-owned row carries:
 
 ```txt
-supabase/schema.sql
+project_tag = 'POKE'
 ```
 
-The schema is safe to rerun. If an earlier POKEHUB schema already exists, it adds `project_tag`, removes old global uniqueness constraints, and replaces them with tag-scoped uniqueness.
+- Reads against shared tables must filter `.eq("project_tag", "POKE")`, or read from a `poke_*` view (`poke_sealed_products`, `poke_cards`, `poke_market_snapshots`, `poke_value_scores`, `poke_portfolio_items`, `poke_ingestion_runs`), which pre-filter to `POKE` rows.
+- Writes use `withProjectTag` (`src/lib/project-tag.ts`) so every insert/upsert carries `project_tag: 'POKE'`.
+- Uniqueness is always composite with the project tag, never global: `project_tag + name` (sealed products, data sources) and `project_tag + pokemon_tcg_id` (cards). No unique index ignores `project_tag`.
 
-## Create the GitHub repo
+## Supabase schema setup
+
+Run `supabase/schema.sql` in the Supabase SQL editor (or apply it as a migration). It is idempotent and safe to rerun, and includes explicit grants for newer Supabase projects where public tables aren't automatically exposed through the Data API. It creates `data_sources`, `sealed_products`, `cards`, `market_snapshots`, `value_scores`, `portfolio_items`, and `ingestion_runs`, each with row-level security, a `poke_*` read view, and project-tag-scoped indexes/uniqueness.
+
+## API routes
+
+All routes run on the Node.js runtime and respond with an `ApiEnvelope` (`{ ok: true, data, run? }` or `{ ok: false, error }`). Ingest routes are gated by the `x-pokehub-ingest-token` header, which must match `POKEHUB_INGEST_TOKEN`.
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/sources/status` | none (read-only booleans) | Adapter status for every source, enriched with its latest ingestion run. |
+| `POST` | `/api/ingest/msrp` | `x-pokehub-ingest-token` | Upserts sealed products from a JSON product list and/or manual CSV text. |
+| `POST` | `/api/ingest/pokemon-tcg` | `x-pokehub-ingest-token` | Fetches from the Pokemon TCG API adapter and upserts cards + market snapshots. |
+| `POST` | `/api/ingest/market-snapshot` | `x-pokehub-ingest-token` | Inserts a single market snapshot row for a card or sealed product. |
+
+When `POKEHUB_INGEST_TOKEN` is unset, ingest routes respond `503` rather than silently accepting unauthenticated writes. Every ingest run is recorded in `ingestion_runs` (status, inserted/updated/skipped counts, timestamps) so Control Center and Settings can show real history instead of guesses.
+
+## Source adapters
+
+POKEHUB uses an API-first, permission-aware ingestion strategy. Live/API adapters (`src/lib/sources/`):
+
+| Adapter | Kind | Credentials | Notes |
+| --- | --- | --- | --- |
+| Pokemon TCG API | api | optional (`POKEMON_TCG_API_KEY`) | Canonical card IDs, set metadata, rarity, images, embedded TCGplayer/Cardmarket pricing. Works keyless at shared public rate limits. |
+| eBay Browse API | api | required (`EBAY_CLIENT_ID` + `EBAY_CLIENT_SECRET`) | Active listing counts and price range via the client-credentials OAuth grant. Disabled until both credentials are set. |
+| PriceCharting API | api | required (`PRICECHARTING_TOKEN`) | Raw/graded value bands. Disabled until a token is set. |
+| Manual CSV Import | csv | none | Local `name,price,kind,source` import flowing through `POST /api/ingest/msrp`. |
+
+Grading/marketplace scrape stubs are registered but **stay `enabled: false`** and only exist to document the compliant path forward — POKEHUB does not scrape sites whose robots.txt or Terms of Service disallow it, and never employs CAPTCHA solving or other anti-bot evasion:
+
+| Stub | Policy stance |
+| --- | --- |
+| TCGplayer Direct | ToS prohibits scraping; requires the TCGplayer developer program API key instead. |
+| Cardmarket Direct | ToS prohibits scraping; requires a Cardmarket API app token/secret instead. |
+| PSA Population | Do not scrape report pages; requires the PSA Public API (`PSA_API_TOKEN`). |
+| CGC Population | No public API; requires written permission or a licensed data feed. |
+| BGS Population | No public API; requires written permission or a licensed data feed from Beckett. |
+
+A stub only ever graduates to a real adapter after written permission or approved API access exists — never by working around ToS or robots.txt.
+
+## Scoring model
+
+`src/workers/score-market.ts` exports pure functions clamped to 0–100:
+
+- `cardValueSignalScore` (alias `scoreCardValueSignal`) — weighted blend of liquidity (22%), sold velocity (18%), rarity (15%), grade scarcity (12%), character demand (10%), set age (8%), condition confidence (7%), market spread (5%), source freshness (3%).
+- `sealedProductSignalScore` (alias `scoreSealedProductSignal`) — above-MSRP (28%), sold velocity (20%), product type demand (15%), set popularity (12%), supply absorption (10%), reprint risk inverse (8%), source freshness (7%).
+- `dataConfidenceScore` (alias `scoreDataConfidence`) — source freshness (35%), source quality (30%), sample size (20%), spread sanity (15%).
+- `scoreSourceFreshness(hoursSinceObservation)` — 100 at 0h, linear decay to 0 at 168h (7 days).
+- `scoreLiquidity({ activeListings, soldCount })` — blends capped active-listing and sold-count signals.
+- `scoreSpreadRisk({ low, high, mid })` — 100 at a zero spread, decaying to 0 as the low/high spread widens; invalid input returns a neutral 50.
+- `clampScore` — shared 0–100 clamp used by every function above.
+
+`src/lib/derived-stats.ts` (`getDerivedSealedStats`, `getDerivedCardStats`) produces deterministic, string-hash-based placeholder stats (never `Math.random()`) for items without a live snapshot yet, always paired with an `EstimateTag` in the UI.
+
+Run:
 
 ```bash
-gh repo create xhan145/POKEHUB --public --description "Pixelated Pokemon TCG market intelligence dashboard"
-git init
-git add .
-git commit -m "Initial POKEHUB scaffold"
-git branch -M main
-git remote add origin https://github.com/xhan145/POKEHUB.git
-git push -u origin main
+npm run score
+npm test
 ```
 
-## Dashboard modules
+## Security notes
 
-### 1. Market Arcade
+- `SUPABASE_SERVICE_ROLE_KEY` is read only on the server and is never bundled into client code or returned by any route.
+- No API response ever renders a secret's value — credential and token state is always surfaced as a boolean (`hasCredentials`, `ingestToken`, etc.).
+- Every ingest route requires the `x-pokehub-ingest-token` header to match `POKEHUB_INGEST_TOKEN`; if the token isn't configured server-side, the route fails closed with `503` instead of accepting writes.
+- Shared Supabase tables have row-level security enabled; anonymous/authenticated roles get `SELECT` scoped to `project_tag = 'POKE'`, and only the service role can write.
 
-Top-level cards:
+## Disclaimer
 
-- Total tracked items
-- Total sealed MSRP basis
-- Market value estimate
-- Above-MSRP delta
-- Biggest movers
-- Highest confidence signals
-- Lowest confidence warnings
-
-### 2. Sealed Product Dex
-
-For ETBs, tins, figure collections, battle decks, booster bundles, UPCs, and special boxes.
-
-Fields:
-
-- Product name
-- MSRP
-- Current low/mid/market/listing estimate
-- Above MSRP %
-- Active listings
-- Sold comps
-- Sales velocity
-- Sealed premium score
-- Reprint risk
-- Source freshness
-
-### 3. Card Value Lab
-
-For individual cards.
-
-Fields:
-
-- Card identity
-- Set
-- Number
-- Rarity
-- Variant
-- Finish
-- Language
-- Condition
-- Grade
-- Population
-- Last sale
-- Market spread
-- Liquidity score
-- Demand score
-- Volatility score
-- Confidence score
-
-### 4. Pixel Portfolio
-
-Track owned items:
-
-- Quantity
-- Acquisition cost
-- Current estimate
-- Unrealized gain/loss
-- Grading candidates
-- Sell/hold/watch flags
-
-### 5. Signal Radar
-
-Risk and opportunity engine:
-
-- Under-MSRP sealed opportunities
-- High spread / low liquidity traps
-- Fresh reprint warnings
-- Grade arbitrage candidates
-- Character hype spikes
-- Low-population grails
-- Fast-velocity commons/uncommons
-
-## Value scoring model
-
-POKEHUB computes a normalized `value_signal_score` from 0-100.
-
-Suggested first formula:
-
-```txt
-value_signal_score =
-  0.22 * liquidity_score +
-  0.18 * sold_velocity_score +
-  0.15 * rarity_score +
-  0.12 * grade_scarcity_score +
-  0.10 * character_demand_score +
-  0.08 * set_age_score +
-  0.07 * condition_confidence_score +
-  0.05 * market_spread_score +
-  0.03 * source_freshness_score
-```
-
-For sealed products, use `sealed_signal_score`:
-
-```txt
-sealed_signal_score =
-  0.28 * above_msrp_score +
-  0.20 * sealed_sales_velocity_score +
-  0.15 * product_type_demand_score +
-  0.12 * set_popularity_score +
-  0.10 * supply_absorption_score +
-  0.08 * reprint_risk_inverse +
-  0.07 * source_freshness_score
-```
-
-## Important disclaimer
-
-POKEHUB is an analysis tool, not financial advice. Trading cards are volatile collectibles. Data sources can be incomplete, delayed, biased by listing noise, or affected by fake sales, grading variance, reprints, and market hype.
+POKEHUB is a collector analytics tool, not financial advice. All card and sealed-product prices are estimates derived from heuristics, deterministic placeholder math, and embedded third-party API data — not verified appraisals. Trading cards are volatile collectibles: data can be incomplete, delayed, noisy, or distorted by fake sales, reprints, grading variance, hype cycles, and thin liquidity. Always verify before buying, selling, or grading.

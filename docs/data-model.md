@@ -1,31 +1,8 @@
 # POKEHUB Data Model
 
-POKEHUB is designed to run in a shared Supabase/Postgres database.
+POKEHUB runs in shared database mode. Every project-owned row includes `project_tag = POKE`.
 
-Every project-owned row must include:
-
-- `project_tag`
-- Default value: `POKE`
-
-This allows POKEHUB to share tables with other dashboards or tools while keeping Pokémon records separated by a simple namespace filter.
-
-## Required query rule
-
-Every read/write query must filter or insert using:
-
-```sql
-project_tag = 'POKE'
-```
-
-The repo also includes helper views:
-
-- `poke_data_sources`
-- `poke_sealed_products`
-- `poke_cards`
-- `poke_market_snapshots`
-- `poke_value_scores`
-
-Use these views for simple POKEHUB-only reads.
+Reads from shared tables must filter by project tag unless using a `poke_*` view. Uniqueness is scoped by project tag.
 
 ## Identity tables
 
@@ -70,6 +47,8 @@ Uniqueness:
 ### market_snapshots
 Append-only pricing observations.
 
+Key fields include `project_tag`, `item_kind`, `item_ref`, `source`, `observed_at`, low/mid/high/market prices, active listings, sold counts, and confidence.
+
 Sources can include:
 - pokemon_tcg_api
 - pricecharting
@@ -102,10 +81,17 @@ Component scores:
 - market_spread_score
 - source_freshness_score
 
-## Shared database safety checklist
+## Operations
 
-- Never create global uniqueness constraints on card/product names.
-- Always use composite uniqueness with `project_tag`.
-- Never query raw tables without a `project_tag` filter unless building an admin/global view.
-- Never expose `SUPABASE_SERVICE_ROLE_KEY` in browser code.
-- Keep `.env.local` uncommitted.
+### ingestion_runs
+One row per ingestion attempt, written by the `/api/ingest/*` routes (and readable through `GET /api/sources/status` as each adapter's `lastRun`). Append-only; the latest row per `source_id` is the source's freshness signal.
+
+Key fields:
+- project_tag
+- source_id (adapter id, e.g. `pokemon-tcg`, `manual-csv`, or the snapshot `source` for `/api/ingest/market-snapshot`)
+- status (`success`, `error`, or `partial`)
+- started_at / finished_at
+- inserted / updated / skipped (row counts for the run)
+- error_message (populated for `error` and `partial` runs; never contains secret values)
+
+Reads go through the `poke_ingestion_runs` view or filter `project_tag = 'POKE'`. Writes happen server-side only via the service-role client; ingest routes are gated by the `x-pokehub-ingest-token` header matching `POKEHUB_INGEST_TOKEN`.
