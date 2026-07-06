@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "0.1.0",
+  "currency": "USD",
+  "products": [
+    {
+      "name": "Pokémon TCG: 30th Celebration Ultra-Premium Collection",
+      "msrp": 179.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Elite Trainer Box",
+      "msrp": 49.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Ditto Premium Collection",
+      "msrp": 39.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Mew Figure Collection",
+      "msrp": 29.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Mewtwo Figure Collection",
+      "msrp": 29.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Booster Bundle",
+      "msrp": 26.94,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Binder Collection",
+      "msrp": 31.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Poster Collection",
+      "msrp": 14.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Battle Deck (Espeon ex)",
+      "msrp": 19.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Battle Deck (Umbreon ex)",
+      "msrp": 19.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Tech Sticker Collection",
+      "msrp": 14.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Knock Out Collection",
+      "msrp": 9.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Mini Tin",
+      "msrp": 9.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Greninja ex Tin",
+      "msrp": 21.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Sylveon ex Tin",
+      "msrp": 21.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Greninja ex Box",
+      "msrp": 21.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    },
+    {
+      "name": "Pokémon TCG: 30th Celebration Sylveon ex Box",
+      "msrp": 21.99,
+      "currency": "USD",
+      "productType": "sealed_product",
+      "source": "manual_seed"
+    }
+  ]
+}
