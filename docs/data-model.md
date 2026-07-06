@@ -24,6 +24,9 @@ Key fields:
 - image_large
 - raw_json
 
+Uniqueness:
+- `project_tag + pokemon_tcg_id`
+
 ### sealed_products
 Manual and scraped product catalog.
 
@@ -35,6 +38,9 @@ Key fields:
 - currency
 - release_date
 - set_name
+
+Uniqueness:
+- `project_tag + name`
 
 ## Market facts
 
@@ -53,6 +59,8 @@ Sources can include:
 - bgs_pop
 
 Never overwrite old observations. The market is a flipbook, not a sticky note.
+
+Indexes include `project_tag`, `item_kind`, `item_ref`, and `observed_at` so POKEHUB can pull only its own market history from a shared database.
 
 ## Scores
 
