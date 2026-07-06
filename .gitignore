@@ -2,7 +2,10 @@ node_modules
 .next
 .env
 .env.local
+.env*.local
+.env.ingest.local
 dist
 coverage
 .DS_Store
 tsconfig.tsbuildinfo
+.vercel
