@@ -17,6 +17,30 @@ It should help collectors answer:
 - Is the market signal fresh, liquid, and trustworthy?
 - Which items deserve watch, buy, grade, sell, or avoid status?
 
+## Shared database requirement
+
+POKEHUB must share a Supabase/Postgres database with other projects.
+
+All POKEHUB-owned rows must use:
+
+```txt
+project_tag = POKE
+```
+
+Use these env vars:
+
+```env
+NEXT_PUBLIC_POKEHUB_PROJECT_TAG=POKE
+POKEHUB_PROJECT_TAG=POKE
+```
+
+Rules:
+- Every insert into shared tables must include `project_tag: "POKE"` or use the `withProjectTag()` helper.
+- Every read from shared tables must filter by `.eq("project_tag", "POKE")`, unless reading from the `poke_*` helper views.
+- Do not add global uniqueness constraints that ignore `project_tag`.
+- Any uniqueness should be composite, such as `project_tag + name` or `project_tag + pokemon_tcg_id`.
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` to client/browser code.
+
 ## Initial data
 
 Use `src/data/msrp-seed.json` as the first sealed product seed list. Keep this list editable by the user.
@@ -80,6 +104,11 @@ Do not hard-code secrets. Use `.env.local`.
 
 Use the SQL in `supabase/schema.sql` as the baseline. Add migrations only if needed.
 
+The schema must remain shared-database safe:
+- all owned tables have `project_tag text not null default 'POKE'`
+- indexes include `project_tag`
+- POKEHUB-only views start with `poke_`
+
 ## Engineering requirements
 
 - TypeScript strict mode.
@@ -108,8 +137,10 @@ Use the SQL in `supabase/schema.sql` as the baseline. Add migrations only if nee
 - MSRP seed products appear in the Sealed Product Dex.
 - Value scoring utility is unit-testable and documented.
 - Supabase schema supports cards, sealed products, market snapshots, and value scores.
+- Supabase schema supports shared database mode with `project_tag = 'POKE'`.
+- All future Supabase queries filter by `project_tag` or use `poke_*` views.
 - API keys are read only from environment variables.
 - Dashboard has empty/error/loading states for future adapters.
 - Pixel aesthetic is visible on desktop and mobile.
-- README includes setup, data model, source adapters, scoring model, and disclaimer.
+- README includes setup, shared database mode, data model, source adapters, scoring model, and disclaimer.
 - Commit all changes with a clear message.
