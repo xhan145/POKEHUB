@@ -1,11 +1,16 @@
 # POKEHUB Data Model
 
+POKEHUB runs in shared database mode. Every project-owned row includes `project_tag = POKE`.
+
+Reads from shared tables must filter by project tag unless using a `poke_*` view. Uniqueness is scoped by project tag.
+
 ## Identity tables
 
 ### cards
 Canonical card metadata from Pokemon TCG API.
 
 Key fields:
+- project_tag
 - pokemon_tcg_id
 - name
 - set_id
@@ -23,6 +28,7 @@ Key fields:
 Manual and scraped product catalog.
 
 Key fields:
+- project_tag
 - name
 - product_type
 - msrp
@@ -34,6 +40,8 @@ Key fields:
 
 ### market_snapshots
 Append-only pricing observations.
+
+Key fields include `project_tag`, `item_kind`, `item_ref`, `source`, `observed_at`, low/mid/high/market prices, active listings, sold counts, and confidence.
 
 Sources can include:
 - pokemon_tcg_api

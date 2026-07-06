@@ -1,38 +1,10 @@
 # POKEHUB
 
-Pixelated Pokémon card market intelligence dashboard.
+POKEHUB is a Pokemon TCG market intelligence dashboard for sealed MSRP, card identity, raw and graded value signals, liquidity, sales velocity, and opportunity/risk scoring.
 
-POKEHUB is designed to standardize sealed product MSRP, individual card metadata, condition/grade information, marketplace snapshots, population signals, sales velocity, and value-risk scoring into one dashboard.
+The UI is styled like a retro collector terminal: pixel panels, CRT scanlines, rarity chips, Pokemon card imagery, dense tables, and the UUPM label for the Unified Underground Price Monitor.
 
-> Status: repo scaffold. Create the GitHub repository, unzip this project into it, then run the commands below.
-
-## Core idea
-
-A card or sealed product should never be treated as "just a price." POKEHUB stores identity, condition, grade, rarity, set context, marketplace liquidity, spread, population, image confidence, source freshness, and comparable sales history as separate variables.
-
-That lets the dashboard answer:
-
-- What is this item worth right now?
-- How far above MSRP is a sealed product trading?
-- Is the price real demand or thin-market noise?
-- Are listings plentiful but sales weak?
-- Is the card valuable because of rarity, playability, character demand, grade scarcity, sealed scarcity, or hype?
-- Which products are undervalued relative to their historical spread and velocity?
-
-## Stack
-
-- Frontend: Next.js, TypeScript, Tailwind CSS
-- UI feel: pixelated game dashboard, CRT glow, 8-bit panels, rarity color chips
-- Charts: Recharts
-- Database: Supabase Postgres
-- Workers: TypeScript ingestion scripts
-- Data sources:
-  - Pokémon TCG API for canonical card, set, image, legality, rarity, and TCGplayer/Cardmarket embedded fields
-  - PriceCharting for graded/current value snapshots where available
-  - eBay Browse API for active listing supply and listing-price signals
-  - Manual CSV imports for MSRP, local comps, PSA pop reports, collector notes, and sealed inventory
-
-## Quick start
+## Run locally
 
 ```bash
 npm install
@@ -40,131 +12,92 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open the app locally and import the MSRP seed file from `src/data/msrp-seed.json`.
+The homepage renders from `src/data/msrp-seed.json` and local mock card/portfolio data without external API keys.
 
-## Create the GitHub repo
+## Environment
 
-The current ChatGPT GitHub connector can write files to existing repositories but cannot create a brand-new repository. Create it once, then push this scaffold:
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_POKEHUB_PROJECT_TAG=POKE
+POKEHUB_PROJECT_TAG=POKE
+
+POKEMON_TCG_API_KEY=
+PRICECHARTING_TOKEN=
+EBAY_CLIENT_ID=
+EBAY_CLIENT_SECRET=
+```
+
+Never commit `.env.local`. The browser client uses only `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Workers may use `SUPABASE_SERVICE_ROLE_KEY`, but that key must never appear in client code.
+
+## Shared database mode
+
+POKEHUB is designed to share Supabase/Postgres tables with other projects. Every POKEHUB-owned row uses:
+
+```txt
+project_tag = POKE
+```
+
+All shared-table reads must filter by `.eq("project_tag", "POKE")` unless reading from a `poke_*` view. All writes use `project_tag = POKE`. Unique indexes are scoped by project tag, such as `project_tag + name` and `project_tag + pokemon_tcg_id`.
+
+Run `supabase/schema.sql` in the Supabase SQL editor. The schema is safe to rerun and includes explicit grants for newer Supabase projects where public tables are not automatically exposed through the Data API.
+
+## Data sources
+
+POKEHUB uses an API-first, permission-aware ingestion strategy:
+
+- Pokemon TCG API: canonical card IDs, set metadata, rarity, images, TCGplayer pricing, and Cardmarket pricing.
+- MSRP seed: local sealed product catalog in `src/data/msrp-seed.json`.
+- PriceCharting: optional future raw/graded values when a token is configured.
+- eBay Browse API: optional future active listing supply when credentials are configured.
+- Grading data: optional future PSA/CGC/BGS enrichment using approved APIs, exports, or manual imports.
+
+Sites that explicitly prohibit automated access are not bulk scraped. Permission-only sources should become adapters only after written permission or approved API access exists.
+
+## Ingestion
+
+Apply the schema first, then configure Supabase credentials.
 
 ```bash
-gh repo create xhan145/POKEHUB --public --description "Pixelated Pokemon TCG market intelligence dashboard"
-git init
-git add .
-git commit -m "Initial POKEHUB scaffold"
-git branch -M main
-git remote add origin git@github.com:xhan145/POKEHUB.git
-git push -u origin main
+npm run ingest:msrp
+npm run ingest:pokemon
 ```
 
-## Dashboard modules
+Pokemon TCG ingest supports small safe batches:
 
-### 1. Market Arcade
-
-Top-level cards:
-
-- Total tracked items
-- Total sealed MSRP basis
-- Market value estimate
-- Above-MSRP delta
-- Biggest movers
-- Highest confidence signals
-- Lowest confidence warnings
-
-### 2. Sealed Product Dex
-
-For ETBs, tins, figure collections, battle decks, booster bundles, UPCs, and special boxes.
-
-Fields:
-
-- Product name
-- MSRP
-- Current low/mid/market/listing estimate
-- Above MSRP %
-- Active listings
-- Sold comps
-- Sales velocity
-- Sealed premium score
-- Reprint risk
-- Source freshness
-
-### 3. Card Value Lab
-
-For individual cards.
-
-Fields:
-
-- Card identity
-- Set
-- Number
-- Rarity
-- Variant
-- Finish
-- Language
-- Condition
-- Grade
-- Population
-- Last sale
-- Market spread
-- Liquidity score
-- Demand score
-- Volatility score
-- Confidence score
-
-### 4. Pixel Portfolio
-
-Track owned items:
-
-- Quantity
-- Acquisition cost
-- Current estimate
-- Unrealized gain/loss
-- Grading candidates
-- Sell/hold/watch flags
-
-### 5. Signal Radar
-
-Risk and opportunity engine:
-
-- Under-MSRP sealed opportunities
-- High spread / low liquidity traps
-- Fresh reprint warnings
-- Grade arbitrage candidates
-- Character hype spikes
-- Low-population grails
-- Fast-velocity commons/uncommons
-
-## Value scoring model
-
-POKEHUB computes a normalized `value_signal_score` from 0-100.
-
-Suggested first formula:
-
-```txt
-value_signal_score =
-  0.22 * liquidity_score +
-  0.18 * sold_velocity_score +
-  0.15 * rarity_score +
-  0.12 * grade_scarcity_score +
-  0.10 * character_demand_score +
-  0.08 * set_age_score +
-  0.07 * condition_confidence_score +
-  0.05 * market_spread_score +
-  0.03 * source_freshness_score
+```bash
+npm run ingest:pokemon -- --pageSize=50 --maxPages=2
+npm run ingest:pokemon -- --q=name:charizard --pageSize=25 --maxPages=1
 ```
 
-For sealed products, use `sealed_signal_score`:
+If Supabase credentials are missing, workers log a clear message and avoid writing rows.
 
-```txt
-sealed_signal_score =
-  0.28 * above_msrp_score +
-  0.20 * sealed_sales_velocity_score +
-  0.15 * product_type_demand_score +
-  0.12 * set_popularity_score +
-  0.10 * supply_absorption_score +
-  0.08 * reprint_risk_inverse +
-  0.07 * source_freshness_score
+## Scoring model
+
+`src/workers/score-market.ts` exports pure 0-100 scoring helpers:
+
+- `cardValueSignalScore`
+- `sealedProductSignalScore`
+- `dataConfidenceScore`
+- `clampScore`
+
+Run:
+
+```bash
+npm run score
+npm test
 ```
 
-## Important disclaimer
+## Validation
 
-POKEHUB is an analysis tool, not financial advice. Trading cards are volatile collectibles. Data sources can be incomplete, delayed, biased by listing noise, or affected by fake sales, grading variance, reprints, and market hype.
+```bash
+npm install
+npm run typecheck
+npm run build
+npm run score
+```
+
+## Disclaimer
+
+POKEHUB is a collector analytics tool, not financial advice. Trading cards are volatile collectibles. Data can be incomplete, delayed, noisy, or distorted by fake sales, reprints, grading variance, hype cycles, and thin liquidity.

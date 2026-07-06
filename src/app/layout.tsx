@@ -3,7 +3,7 @@ import "@/styles/globals.css";
 
 export const metadata: Metadata = {
   title: "POKEHUB",
-  description: "Pixelated Pokemon TCG market intelligence dashboard"
+  description: "Pokemon TCG market intelligence dashboard"
 };
 
 export default function RootLayout({

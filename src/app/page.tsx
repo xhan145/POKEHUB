@@ -1,27 +1,15 @@
-import { MarketArcade } from "@/components/dashboard/MarketArcade";
-import { SealedDex } from "@/components/dashboard/SealedDex";
-import { SignalRadar } from "@/components/dashboard/SignalRadar";
+import { DashboardApp } from "@/components/dashboard/DashboardApp";
 import { PixelShell } from "@/components/pixel/PixelShell";
 import msrpSeed from "@/data/msrp-seed.json";
+import { getEnvReadiness, mockCards, mockPortfolio } from "@/lib/pokehub-data";
+import type { MsrpProduct } from "@/types/pokehub";
 
 export default function HomePage() {
+  const products = msrpSeed.products as MsrpProduct[];
+
   return (
     <PixelShell>
-      <section className="space-y-6">
-        <div className="pixel-panel p-6">
-          <p className="pixel-kicker">POKEHUB // MARKET ARCADE</p>
-          <h1 className="pixel-title">Pokémon Card Value Intelligence</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-            Standardize MSRP, cards, sealed products, graded comps, marketplace
-            listings, sold velocity, scarcity, and risk signals into one
-            collector-grade dashboard.
-          </p>
-        </div>
-
-        <MarketArcade products={msrpSeed.products} />
-        <SealedDex products={msrpSeed.products} />
-        <SignalRadar />
-      </section>
+      <DashboardApp products={products} cards={mockCards} portfolio={mockPortfolio} env={getEnvReadiness()} />
     </PixelShell>
   );
 }
