@@ -4,7 +4,7 @@ Pixelated Pokémon card market intelligence dashboard.
 
 POKEHUB is designed to standardize sealed product MSRP, individual card metadata, condition/grade information, marketplace snapshots, population signals, sales velocity, and value-risk scoring into one dashboard.
 
-> Status: repo scaffold. Create the GitHub repository, unzip this project into it, then run the commands below.
+> Status: repo scaffold. The app now supports shared Supabase database mode using `project_tag = 'POKE'`.
 
 ## Core idea
 
@@ -19,12 +19,49 @@ That lets the dashboard answer:
 - Is the card valuable because of rarity, playability, character demand, grade scarcity, sealed scarcity, or hype?
 - Which products are undervalued relative to their historical spread and velocity?
 
+## Shared database mode
+
+POKEHUB can live inside the same Supabase/Postgres database as other projects.
+
+Every POKEHUB-owned row is scoped with:
+
+```txt
+project_tag = POKE
+```
+
+This prevents Pokémon data from colliding with other app data in shared tables.
+
+Required environment variables:
+
+```env
+NEXT_PUBLIC_POKEHUB_PROJECT_TAG=POKE
+POKEHUB_PROJECT_TAG=POKE
+```
+
+Required query rule:
+
+```sql
+select * from sealed_products where project_tag = 'POKE';
+select * from cards where project_tag = 'POKE';
+select * from market_snapshots where project_tag = 'POKE';
+```
+
+The schema also creates POKEHUB-only views:
+
+- `poke_data_sources`
+- `poke_sealed_products`
+- `poke_cards`
+- `poke_market_snapshots`
+- `poke_value_scores`
+
+Use the views when you want the clean POKEHUB slice of the shared database.
+
 ## Stack
 
 - Frontend: Next.js, TypeScript, Tailwind CSS
 - UI feel: pixelated game dashboard, CRT glow, 8-bit panels, rarity color chips
 - Charts: Recharts
-- Database: Supabase Postgres
+- Database: Supabase Postgres, shared-database compatible through `project_tag`
 - Workers: TypeScript ingestion scripts
 - Data sources:
   - Pokémon TCG API for canonical card, set, image, legality, rarity, and TCGplayer/Cardmarket embedded fields
@@ -42,9 +79,17 @@ npm run dev
 
 Open the app locally and import the MSRP seed file from `src/data/msrp-seed.json`.
 
-## Create the GitHub repo
+## Supabase setup
 
-The current ChatGPT GitHub connector can write files to existing repositories but cannot create a brand-new repository. Create it once, then push this scaffold:
+Run the shared database schema in Supabase SQL Editor:
+
+```txt
+supabase/schema.sql
+```
+
+The schema is safe to rerun. If an earlier POKEHUB schema already exists, it adds `project_tag`, removes old global uniqueness constraints, and replaces them with tag-scoped uniqueness.
+
+## Create the GitHub repo
 
 ```bash
 gh repo create xhan145/POKEHUB --public --description "Pixelated Pokemon TCG market intelligence dashboard"
@@ -52,7 +97,7 @@ git init
 git add .
 git commit -m "Initial POKEHUB scaffold"
 git branch -M main
-git remote add origin git@github.com:xhan145/POKEHUB.git
+git remote add origin https://github.com/xhan145/POKEHUB.git
 git push -u origin main
 ```
 
