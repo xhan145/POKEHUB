@@ -199,3 +199,11 @@ create policy "POKE rows are readable" on public.ingestion_runs for select to an
 grant select on public.poke_ingestion_runs to anon, authenticated;
 grant select on public.ingestion_runs to anon, authenticated;
 grant select, insert, update, delete on public.ingestion_runs to service_role;
+
+create or replace view public.poke_sets
+with (security_invoker = true) as
+select set_id as id, max(set_name) as name, count(*)::int as total
+from public.cards
+where project_tag = 'POKE' and set_id is not null
+group by set_id;
+grant select on public.poke_sets to anon, authenticated;
