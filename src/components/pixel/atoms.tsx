@@ -64,6 +64,8 @@ export function DetailDrawer({
 }) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchDeltaYRef = useRef(0);
 
   useEffect(() => {
     if (!open) {
@@ -108,6 +110,29 @@ export function DetailDrawer({
     }
   };
 
+  const onTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    touchDeltaYRef.current = 0;
+  };
+
+  const onTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartYRef.current === null) {
+      return;
+    }
+    const currentY = event.touches[0]?.clientY;
+    if (currentY !== undefined) {
+      touchDeltaYRef.current = currentY - touchStartYRef.current;
+    }
+  };
+
+  const onTouchEnd = () => {
+    if (touchStartYRef.current !== null && touchDeltaYRef.current > 80) {
+      onClose();
+    }
+    touchStartYRef.current = null;
+    touchDeltaYRef.current = 0;
+  };
+
   return (
     <>
       <div className="drawer-scrim" onClick={onClose} aria-hidden="true" />
@@ -119,6 +144,9 @@ export function DetailDrawer({
         aria-label={title}
         tabIndex={-1}
         onKeyDown={onKeyDown}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <h2 className="pixel-kicker pt-3">{title}</h2>

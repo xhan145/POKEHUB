@@ -5,6 +5,8 @@ import { getLiveOverview } from "@/lib/live-data";
 import { getEnvReadiness, mockCards, mockPortfolio } from "@/lib/pokehub-data";
 import type { MsrpProduct } from "@/types/pokehub";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const products = msrpSeed.products as MsrpProduct[];
   const live = await getLiveOverview();

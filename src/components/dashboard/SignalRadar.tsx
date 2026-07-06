@@ -23,7 +23,7 @@ function firstNames(names: string[]) {
   return names.slice(0, 3);
 }
 
-export function computeRadar(products: MsrpProduct[], cards: CardIdentity[]): RadarPanel[] {
+function computeRadar(products: MsrpProduct[], cards: CardIdentity[]): RadarPanel[] {
   const underMsrp = products.filter((product) => getEstimatedMarketPrice(product) < product.msrp);
   const aboveMsrpMovers = products.filter(
     (product) => getDerivedSealedStats(product.name, product.msrp).signalScore >= 70

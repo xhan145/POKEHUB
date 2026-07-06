@@ -21,10 +21,16 @@ const MIN_SCORE_THRESHOLD: Record<MinScoreOption, number> = {
 export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
   const [search, setSearch] = useState("");
   const [rarity, setRarity] = useState("ALL");
+  const [setName, setSetName] = useState("ALL");
   const [minScore, setMinScore] = useState<MinScoreOption>("ALL");
 
   const rarities = useMemo(
     () => ["ALL", ...Array.from(new Set(cards.map((card) => card.rarity ?? "Unknown")))],
+    [cards]
+  );
+
+  const sets = useMemo(
+    () => ["ALL", ...Array.from(new Set(cards.map((card) => card.setName)))],
     [cards]
   );
 
@@ -33,9 +39,10 @@ export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
       .toLowerCase()
       .includes(search.toLowerCase());
     const matchesRarity = rarity === "ALL" || (card.rarity ?? "Unknown") === rarity;
+    const matchesSet = setName === "ALL" || card.setName === setName;
     const matchesScore = getDerivedCardStats(card).signalScore >= MIN_SCORE_THRESHOLD[minScore];
 
-    return matchesSearch && matchesRarity && matchesScore;
+    return matchesSearch && matchesRarity && matchesSet && matchesScore;
   });
 
   return (
@@ -43,7 +50,7 @@ export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
       <div className="border-b border-fuchsia-500/30 p-4">
         <SectionHeader kicker="CARD VALUE LAB" title="Pokemon TCG API-ready card analysis" />
       </div>
-      <div className="grid gap-3 border-b border-white/10 bg-black/20 p-4 md:grid-cols-3">
+      <div className="grid gap-3 border-b border-white/10 bg-black/20 p-4 md:grid-cols-4">
         <input
           className="pixel-input"
           value={search}
@@ -52,6 +59,11 @@ export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
         />
         <select className="pixel-input" value={rarity} onChange={(event) => setRarity(event.target.value)}>
           {rarities.map((item) => (
+            <option key={item}>{item}</option>
+          ))}
+        </select>
+        <select className="pixel-input" value={setName} onChange={(event) => setSetName(event.target.value)}>
+          {sets.map((item) => (
             <option key={item}>{item}</option>
           ))}
         </select>

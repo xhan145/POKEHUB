@@ -29,6 +29,12 @@ export function CardFlip({
     }
   };
 
+  const onBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setFlipped(false);
+    }
+  };
+
   return (
     <div className={clsx("card-stage", className)}>
       <div
@@ -39,6 +45,7 @@ export function CardFlip({
         aria-label={ariaLabel}
         onClick={() => setFlipped((current) => !current)}
         onKeyDown={onKeyDown}
+        onBlur={onBlur}
       >
         <div className="card-flip__face card-flip__face--front">{front}</div>
         <div className="card-flip__face card-flip__face--back">{back}</div>
