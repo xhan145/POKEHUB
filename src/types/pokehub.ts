@@ -10,6 +10,8 @@ export type SignalBadge =
 export type DataSource =
   | "manual_seed"
   | "pokemon_tcg_api"
+  | "tcgplayer"
+  | "cardmarket"
   | "tcgdex"
   | "pricecharting"
   | "ebay_browse"

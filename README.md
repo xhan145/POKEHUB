@@ -97,6 +97,7 @@ POKEHUB serves its full card catalog (20k+ cards plus price snapshot history) fr
 | `/api/v1/sets` | `page`, `pageSize` | All sets as `{ id, name, total }`, where `total` is the card count in our catalog. |
 | `/api/v1/sets/{id}` | none | Single set by id. `404 { "error": "Set not found" }` for unknown ids. |
 | `/api/v1/prices/{cardId}` | none | POKEHUB extension: full price-snapshot history for a card, newest first, max 100 rows. `404` for unknown ids; empty `data` when the card has no snapshots. |
+| `/api/v1/trust/{cardId}` | none | POKEHUB extension: the card's Trust & Parity rating (`cardId` plus the `pokehub.trust` shape below). `404` for unknown ids. |
 
 Pagination on list endpoints: `page` is 1-based (default 1, clamped to at least 1); `pageSize` defaults to 50 and is clamped to 1â€“250. Bad params never produce a 500 â€” they are coerced, clamped, or defaulted.
 
@@ -158,7 +159,50 @@ Unsupported syntax is **ignored, not errored**: `OR`, ranges (`[x TO y]`), wildc
 
 ### Compatibility
 
-Same envelope and card object shape as pokemontcg.io; card objects come from the stored original API payloads. The only addition is the POKEHUB-namespaced `pokehub.lastSnapshot` block (`null` when a card has no snapshots yet), so existing pokemontcg.io client code can consume responses unchanged.
+Same envelope and card object shape as pokemontcg.io; card objects come from the stored original API payloads. The only additions are the POKEHUB-namespaced `pokehub.lastSnapshot` block (`null` when a card has no snapshots yet) and the `pokehub.trust` block (below), so existing pokemontcg.io client code can consume responses unchanged.
+
+### Trust & Parity (`pokehub.trust`)
+
+Every card object carries a `pokehub.trust` rating derived at read time from how well POKEHUB's independent price sources (TCGplayer and Cardmarket, distinguished at ingest) agree, how fresh the data is, and how many sources cover the card. Snapshots are deduped to the latest per source before scoring, and the same rating is served standalone at `GET /api/v1/trust/{cardId}`.
+
+```json
+{
+  "pokehub": {
+    "trust": {
+      "score": 88,
+      "tier": "VERIFIED",
+      "parity": 91,
+      "freshness": 100,
+      "coverage": 2,
+      "sources": [
+        { "source": "cardmarket", "market": 11.5, "observedAt": "2026-07-01T00:00:00.000Z" },
+        { "source": "tcgplayer", "market": 12.0, "observedAt": "2026-07-02T00:00:00.000Z" }
+      ],
+      "newestObservedAt": "2026-07-02T00:00:00.000Z"
+    }
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `score` | Overall 0-100 trust score (shared data-confidence model). |
+| `tier` | One of `VERIFIED`, `SOLID`, `SINGLE_SOURCE`, `STALE`, `NONE` (legend below). |
+| `parity` | 0-100 cross-source price agreement; `null` when fewer than two sources. |
+| `freshness` | 0-100 freshness of the newest observation (100 at 0h, decaying to 0 by 7 days). |
+| `coverage` | Count of distinct sources with a usable price. |
+| `sources` | Latest snapshot per source (`source`, `market`, `observedAt`), sorted by source name. |
+| `newestObservedAt` | ISO timestamp of the newest observation; `null` when there is no usable price. |
+
+Tier legend:
+
+| Tier | Meaning |
+| --- | --- |
+| `VERIFIED` | Two or more sources agree closely on a fresh price (high parity, recent). |
+| `SOLID` | Multiple sources cover the card but agreement or freshness is weaker than `VERIFIED`. |
+| `SINGLE_SOURCE` | Only one source has a usable price, so cross-source parity can't be computed. |
+| `STALE` | The newest price is older than 30 days, regardless of coverage. |
+| `NONE` | No usable price data for the card yet. |
 
 ### Caching
 

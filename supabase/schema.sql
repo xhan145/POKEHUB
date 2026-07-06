@@ -207,3 +207,16 @@ from public.cards
 where project_tag = 'POKE' and set_id is not null
 group by set_id;
 grant select on public.poke_sets to anon, authenticated;
+
+-- Migration pokehub_snapshot_source_labels (applied out-of-band; documented here for the
+-- Trust & Parity Engine). Existing snapshots were all written with source='pokemon_tcg_api'
+-- but carry two independent marketplaces distinguishable by confidence_score: 72=TCGplayer,
+-- 68=Cardmarket. The trust engine needs distinct source labels to measure cross-source parity,
+-- so this relabels the historical rows. Idempotent: once relabeled, the WHERE clause matches
+-- nothing on re-run. src/workers/ingest-pokemon-tcg.ts now writes 'tcgplayer'/'cardmarket'
+-- directly, so future snapshots need no relabel.
+--   update public.market_snapshots
+--   set source = case when confidence_score = 72 then 'tcgplayer'
+--                     when confidence_score = 68 then 'cardmarket'
+--                     else source end
+--   where project_tag = 'POKE' and source = 'pokemon_tcg_api';

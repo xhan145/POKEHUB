@@ -1,6 +1,7 @@
+import type { TrustResult } from "@/lib/api-v1/trust-engine";
 import type { CardIdentity } from "@/types/pokehub";
 
-export type LiveCard = { identity: CardIdentity; market: number | null };
+export type LiveCard = { identity: CardIdentity; market: number | null; trust: TrustResult | null };
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -19,6 +20,12 @@ function optionalString(value: unknown): string | undefined {
 function optionalStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.every((item) => typeof item === "string") ? (value as string[]) : undefined;
+}
+
+// The API already computed trust; accept it only when it looks like a TrustResult.
+function parseTrust(value: unknown): TrustResult | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  return typeof (value as { tier?: unknown }).tier === "string" ? (value as TrustResult) : null;
 }
 
 export function apiCardToLiveCard(obj: Record<string, unknown>): LiveCard {
@@ -43,9 +50,10 @@ export function apiCardToLiveCard(obj: Record<string, unknown>): LiveCard {
 
   const rawMarket = lastSnapshot.market;
   const market = rawMarket === null || rawMarket === undefined ? NaN : Number(rawMarket);
-  return { identity, market: Number.isFinite(market) ? market : null };
+  const trust = parseTrust(asRecord(obj.pokehub).trust);
+  return { identity, market: Number.isFinite(market) ? market : null, trust };
 }
 
 export function mockToLiveCards(cards: CardIdentity[]): LiveCard[] {
-  return cards.map((identity) => ({ identity, market: null }));
+  return cards.map((identity) => ({ identity, market: null, trust: null }));
 }

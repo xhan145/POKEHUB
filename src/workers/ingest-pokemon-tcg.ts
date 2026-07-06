@@ -107,7 +107,7 @@ function toSnapshotRows(card: PokemonTcgCard) {
       withProjectTag({
         item_kind: "card",
         item_ref: card.id,
-        source: "pokemon_tcg_api",
+        source: "tcgplayer",
         observed_at: observedAt,
         low: tcgplayerPrice.low ?? null,
         mid: tcgplayerPrice.mid ?? null,
@@ -125,7 +125,7 @@ function toSnapshotRows(card: PokemonTcgCard) {
       withProjectTag({
         item_kind: "card",
         item_ref: card.id,
-        source: "pokemon_tcg_api",
+        source: "cardmarket",
         observed_at: observedAt,
         low: card.cardmarket.prices.lowPrice ?? null,
         mid: card.cardmarket.prices.averageSellPrice ?? null,
@@ -158,15 +158,17 @@ async function fetchCardsPage(page: number, pageSize: number, query: string) {
 
   const maxRetries = getArgNumber("maxRetries", 5);
   let attempt = 0;
-  // Retry transient rate-limit (429) and server (5xx) responses with exponential backoff
-  // so a long keyless full-catalog crawl is not aborted by a single throttled page.
+  // Retry transient rate-limit (429), server (5xx), and 404 responses with exponential
+  // backoff so a long keyless full-catalog crawl is not aborted by a single blip. A 404 on
+  // an in-range page is always transient here: at end-of-data the API returns 200 with an
+  // empty page (count 0), never 404 — so retrying a 404 is safe and never masks real absence.
   for (;;) {
     const response = await fetch(url, { headers });
     if (response.ok) {
       return ApiResponseSchema.parse(await response.json());
     }
 
-    const retryable = response.status === 429 || response.status >= 500;
+    const retryable = response.status === 404 || response.status === 429 || response.status >= 500;
     if (!retryable || attempt >= maxRetries) {
       throw new Error(`Pokemon TCG API failed: ${response.status} ${response.statusText}`);
     }

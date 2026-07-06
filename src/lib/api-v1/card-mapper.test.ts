@@ -111,7 +111,35 @@ test("apiCardToLiveCard ignores malformed nested shapes without throwing", () =>
   assert.equal(live.market, null);
 });
 
-test("mockToLiveCards wraps identities with market null", () => {
+test("apiCardToLiveCard parses a well-formed pokehub.trust into LiveCard.trust", () => {
+  const trust = {
+    score: 88,
+    tier: "VERIFIED",
+    parity: 91,
+    freshness: 100,
+    coverage: 2,
+    sources: [
+      { source: "cardmarket", market: 11.5, observedAt: "2026-07-01T00:00:00Z" },
+      { source: "tcgplayer", market: 12.0, observedAt: "2026-07-02T00:00:00Z" }
+    ],
+    newestObservedAt: "2026-07-02T00:00:00Z"
+  };
+  const live = apiCardToLiveCard({ ...fullApiCard, pokehub: { ...fullApiCard.pokehub, trust } });
+
+  assert.deepStrictEqual(live.trust, trust);
+});
+
+test("apiCardToLiveCard yields trust null when pokehub.trust is absent or malformed", () => {
+  assert.equal(apiCardToLiveCard(fullApiCard).trust, null);
+  assert.equal(apiCardToLiveCard({ id: "x" }).trust, null);
+  assert.equal(apiCardToLiveCard({ id: "x", pokehub: {} }).trust, null);
+  assert.equal(apiCardToLiveCard({ id: "x", pokehub: { trust: null } }).trust, null);
+  assert.equal(apiCardToLiveCard({ id: "x", pokehub: { trust: "SOLID" } }).trust, null);
+  assert.equal(apiCardToLiveCard({ id: "x", pokehub: { trust: {} } }).trust, null);
+  assert.equal(apiCardToLiveCard({ id: "x", pokehub: { trust: { tier: 3 } } }).trust, null);
+});
+
+test("mockToLiveCards wraps identities with market null and trust null", () => {
   const identity: CardIdentity = {
     projectTag: "POKE",
     pokemonTcgId: "swsh12pt5-160",
@@ -121,6 +149,6 @@ test("mockToLiveCards wraps identities with market null", () => {
     number: "160"
   };
 
-  assert.deepStrictEqual(mockToLiveCards([identity]), [{ identity, market: null }]);
+  assert.deepStrictEqual(mockToLiveCards([identity]), [{ identity, market: null, trust: null }]);
   assert.deepStrictEqual(mockToLiveCards([]), []);
 });

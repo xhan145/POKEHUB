@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { parseCardQuery, type CardsParams } from "@/lib/api-v1/query";
+import { computeTrust, type TrustResult, type TrustSnapshotInput } from "@/lib/api-v1/trust-engine";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export type RepoResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -38,11 +39,20 @@ export type SnapshotRow = {
   confidence_score: number | null;
 };
 
+export type TrustSnapshotRow = {
+  item_ref: string;
+  source: string;
+  market: number | null;
+  observed_at: string;
+};
+
 const CARD_COLUMNS =
   "pokemon_tcg_id, name, set_id, set_name, number, rarity, artist, supertype, subtypes, image_small, image_large, raw_json";
 
 export const SNAPSHOT_COLUMNS =
   "item_ref, source, observed_at, low, mid, high, market, direct_low, confidence_score";
+
+export const TRUST_SNAPSHOT_COLUMNS = "item_ref, source, market, observed_at";
 
 const CLIENT_UNAVAILABLE = "supabase anon client is not configured";
 
@@ -129,8 +139,16 @@ export async function searchCardObjects(
     }
   }
 
+  const trustResult = await getTrustForCards(ids);
+  if (!trustResult.ok) return trustResult;
+  const trustByCard = trustResult.value;
+
   const cards = rows.map((row) =>
-    toCardObject(row, row.pokemon_tcg_id ? (latestByCard.get(row.pokemon_tcg_id) ?? null) : null)
+    toCardObject(
+      row,
+      row.pokemon_tcg_id ? (latestByCard.get(row.pokemon_tcg_id) ?? null) : null,
+      row.pokemon_tcg_id ? (trustByCard[row.pokemon_tcg_id] ?? null) : null
+    )
   );
   return { ok: true, value: { cards, totalCount } };
 }
@@ -196,6 +214,42 @@ export async function getSnapshotsForCard(
   return { ok: true, value: (data ?? []) as unknown as SnapshotRow[] };
 }
 
+export async function getTrustForCards(
+  cardIds: string[]
+): Promise<RepoResult<Record<string, TrustResult>>> {
+  if (cardIds.length === 0) return { ok: true, value: {} };
+
+  const client = getAnonClient();
+  if (!client) return { ok: false, error: CLIENT_UNAVAILABLE };
+
+  const { data, error } = await client
+    .from("poke_market_snapshots")
+    .select(TRUST_SNAPSHOT_COLUMNS)
+    .eq("item_kind", "card")
+    .in("item_ref", cardIds);
+  if (error) return { ok: false, error: error.message };
+
+  const snapshotsByCard = new Map<string, TrustSnapshotInput[]>();
+  for (const row of (data ?? []) as unknown as TrustSnapshotRow[]) {
+    const list = snapshotsByCard.get(row.item_ref) ?? [];
+    list.push({ source: row.source, market: row.market, observedAt: row.observed_at });
+    snapshotsByCard.set(row.item_ref, list);
+  }
+
+  const now = Date.now();
+  const value: Record<string, TrustResult> = {};
+  for (const cardId of cardIds) {
+    value[cardId] = computeTrust(snapshotsByCard.get(cardId) ?? [], now);
+  }
+  return { ok: true, value };
+}
+
+export async function getTrustForCard(cardId: string): Promise<RepoResult<TrustResult>> {
+  const result = await getTrustForCards([cardId]);
+  if (!result.ok) return result;
+  return { ok: true, value: result.value[cardId] ?? computeTrust([], Date.now()) };
+}
+
 export async function getHealth(): Promise<
   RepoResult<{ cards: number; snapshots: number; lastIngest: string | null }>
 > {
@@ -237,7 +291,11 @@ export function toSnapshotSummary(row: SnapshotRow): Record<string, unknown> {
   };
 }
 
-export function toCardObject(row: CardRow, lastSnapshot: SnapshotRow | null): Record<string, unknown> {
+export function toCardObject(
+  row: CardRow,
+  lastSnapshot: SnapshotRow | null,
+  trust: TrustResult | null = null
+): Record<string, unknown> {
   const base: Record<string, unknown> =
     row.raw_json !== null && typeof row.raw_json === "object"
       ? row.raw_json
@@ -254,6 +312,6 @@ export function toCardObject(row: CardRow, lastSnapshot: SnapshotRow | null): Re
         };
   return {
     ...base,
-    pokehub: { lastSnapshot: lastSnapshot ? toSnapshotSummary(lastSnapshot) : null }
+    pokehub: { lastSnapshot: lastSnapshot ? toSnapshotSummary(lastSnapshot) : null, trust }
   };
 }

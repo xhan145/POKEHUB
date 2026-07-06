@@ -6,6 +6,7 @@ import { CardOrbitGrid } from "@/components/three/CardOrbitGrid";
 import { CardFlip } from "@/components/three/CardFlip";
 import { EmptyState, EstimateTag, Money, SectionHeader, SkeletonPanel } from "@/components/pixel/atoms";
 import type { LiveCard } from "@/lib/api-v1/card-mapper";
+import type { TrustResult, TrustTier } from "@/lib/api-v1/trust-engine";
 import { getDerivedCardStats } from "@/lib/derived-stats";
 import { useCardsSearch } from "@/lib/use-cards-search";
 
@@ -37,6 +38,61 @@ const PAGE_SIZE = 24;
 
 const pagerButtonClass =
   "min-h-[44px] min-w-[44px] cursor-pointer border-2 border-emerald-400/50 bg-black/40 px-4 font-terminal text-xs font-black text-emerald-100 transition-colors hover:border-yellow-300/80 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-emerald-400/50";
+
+const TRUST_TIER_META: Record<TrustTier, { label: string; className: string }> = {
+  VERIFIED: { label: "VERIFIED", className: "border-emerald-400/70 bg-emerald-950/60 text-emerald-100" },
+  SOLID: { label: "SOLID", className: "border-sky-400/70 bg-sky-950/60 text-sky-100" },
+  SINGLE_SOURCE: { label: "1 SOURCE", className: "border-amber-400/70 bg-amber-950/60 text-amber-100" },
+  STALE: { label: "STALE", className: "border-slate-400/70 bg-slate-900/60 text-slate-200" },
+  NONE: { label: "NO DATA", className: "border-zinc-500/60 bg-zinc-900/60 text-zinc-300" }
+};
+
+const shortDateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+
+function shortDate(observedAt: string): string {
+  const parsed = Date.parse(observedAt);
+  return Number.isFinite(parsed) ? shortDateFormatter.format(parsed) : "-";
+}
+
+function TrustBadge({ trust }: { trust: TrustResult | null }) {
+  if (!trust) return null;
+  const meta = TRUST_TIER_META[trust.tier];
+  if (!meta) return null;
+  return (
+    <span
+      className={`inline-flex items-center border px-1.5 py-0.5 font-terminal text-[9px] font-black tracking-wide ${meta.className}`}
+      title={`Trust ${trust.tier} - score ${trust.score}`}
+    >
+      {meta.label}
+    </span>
+  );
+}
+
+function TrustBreakdown({ trust }: { trust: TrustResult | null }) {
+  if (!trust) return null;
+  return (
+    <div className="mt-1 border-t border-white/10 pt-1.5">
+      <p className="flex items-center justify-between">
+        <span className="pixel-kicker text-[8px]">Trust {trust.tier}</span>
+        <TrustBadge trust={trust} />
+      </p>
+      {trust.sources.map((source) => (
+        <p key={source.source} className="flex items-center justify-between text-slate-300">
+          <span className="capitalize">{source.source}</span>
+          <span className="font-mono text-emerald-200">
+            <Money value={source.market} /> - {shortDate(source.observedAt)}
+          </span>
+        </p>
+      ))}
+      <p className="flex items-center justify-between text-slate-400">
+        <span>Parity / Fresh / Cover</span>
+        <span className="font-mono text-fuchsia-100">
+          {trust.parity ?? "-"} / {trust.freshness} / {trust.coverage}
+        </span>
+      </p>
+    </div>
+  );
+}
 
 export function CardValueLab({
   initialCards,
@@ -126,7 +182,12 @@ export function CardValueLab({
                       glow={stats.glow}
                       ariaLabel={`${card.identity.name}, flip for market detail`}
                       front={
-                        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-black/40 p-3">
+                        <div className="relative flex h-full w-full flex-col items-center justify-center gap-2 bg-black/40 p-3">
+                          {card.trust && (
+                            <div className="absolute right-2 top-2">
+                              <TrustBadge trust={card.trust} />
+                            </div>
+                          )}
                           {card.identity.imageSmall ? (
                             <img
                               className="h-40 w-28 object-contain"
@@ -175,6 +236,7 @@ export function CardValueLab({
                             <span>Signal</span>
                             <span className="font-mono text-fuchsia-100">{stats.signalScore}</span>
                           </p>
+                          <TrustBreakdown trust={card.trust} />
                           {card.market === null && (
                             <div className="mt-auto flex justify-end">
                               <EstimateTag />
