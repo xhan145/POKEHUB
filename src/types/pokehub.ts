@@ -1,4 +1,11 @@
+export type ProjectTag = "POKE" | string;
+
+export type ProjectScoped = {
+  projectTag: ProjectTag;
+};
+
 export type MsrpProduct = {
+  projectTag?: ProjectTag;
   name: string;
   msrp: number;
   currency: "USD";
@@ -6,7 +13,7 @@ export type MsrpProduct = {
   source: "manual_seed";
 };
 
-export type CardIdentity = {
+export type CardIdentity = ProjectScoped & {
   pokemonTcgId: string;
   name: string;
   setId: string;
@@ -20,7 +27,7 @@ export type CardIdentity = {
   imageLarge?: string;
 };
 
-export type MarketSnapshot = {
+export type MarketSnapshot = ProjectScoped & {
   itemId: string;
   itemKind: "card" | "sealed_product";
   source: "pokemon_tcg_api" | "pricecharting" | "ebay" | "manual";
