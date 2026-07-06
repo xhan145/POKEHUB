@@ -112,7 +112,10 @@ alter table public.cards drop constraint if exists cards_pokemon_tcg_id_key;
 
 create unique index if not exists data_sources_project_name_key on public.data_sources(project_tag, name);
 create unique index if not exists sealed_products_project_name_key on public.sealed_products(project_tag, name);
-create unique index if not exists cards_project_pokemon_tcg_id_key on public.cards(project_tag, pokemon_tcg_id) where pokemon_tcg_id is not null;
+-- Full (non-partial) unique index: PostgREST cannot infer partial unique indexes for
+-- ON CONFLICT upserts, and Postgres already treats NULL pokemon_tcg_id rows as distinct.
+drop index if exists cards_project_pokemon_tcg_id_key;
+create unique index if not exists cards_project_pokemon_tcg_id_key on public.cards(project_tag, pokemon_tcg_id);
 
 create index if not exists idx_sealed_products_project on public.sealed_products(project_tag, name);
 create index if not exists idx_cards_project on public.cards(project_tag, set_id, number);
@@ -170,3 +173,29 @@ grant select on public.poke_portfolio_items to anon, authenticated;
 
 grant select on public.data_sources, public.sealed_products, public.cards, public.market_snapshots, public.value_scores, public.portfolio_items to anon, authenticated;
 grant select, insert, update, delete on public.data_sources, public.sealed_products, public.cards, public.market_snapshots, public.value_scores, public.portfolio_items to service_role;
+
+create table if not exists public.ingestion_runs (
+  id uuid primary key default gen_random_uuid(),
+  project_tag text not null default 'POKE',
+  source_id text not null,
+  status text not null check (status in ('success', 'error', 'partial')),
+  started_at timestamptz not null default now(),
+  finished_at timestamptz,
+  inserted integer not null default 0,
+  updated integer not null default 0,
+  skipped integer not null default 0,
+  error_message text
+);
+
+create index if not exists idx_ingestion_runs_source on public.ingestion_runs(project_tag, source_id, started_at desc);
+
+create or replace view public.poke_ingestion_runs
+with (security_invoker = true) as
+select * from public.ingestion_runs where project_tag = 'POKE';
+
+alter table public.ingestion_runs enable row level security;
+drop policy if exists "POKE rows are readable" on public.ingestion_runs;
+create policy "POKE rows are readable" on public.ingestion_runs for select to anon, authenticated using (project_tag = 'POKE');
+grant select on public.poke_ingestion_runs to anon, authenticated;
+grant select on public.ingestion_runs to anon, authenticated;
+grant select, insert, update, delete on public.ingestion_runs to service_role;

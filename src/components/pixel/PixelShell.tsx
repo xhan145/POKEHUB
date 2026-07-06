@@ -1,4 +1,10 @@
-export function PixelShell({ children }: { children: React.ReactNode }) {
+export function PixelShell({
+  children,
+  liveMode
+}: {
+  children: React.ReactNode;
+  liveMode?: boolean;
+}) {
   return (
     <main className="min-h-screen bg-[#08070d] text-white">
       <div className="scanlines" />
@@ -13,8 +19,12 @@ export function PixelShell({ children }: { children: React.ReactNode }) {
               </span>
             </div>
           </div>
-          <div className="hidden text-right text-[10px] uppercase tracking-[0.18em] text-yellow-100 md:block">
-            UUPM link active
+          <div className="hidden items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-yellow-100 md:flex">
+            <span
+              aria-hidden="true"
+              className={`inline-block h-2 w-2 rounded-full ${liveMode ? "bg-emerald-400" : "bg-yellow-400"}`}
+            />
+            <span>{liveMode ? "LIVE DB" : "SEED MODE"}</span>
           </div>
         </nav>
         {children}

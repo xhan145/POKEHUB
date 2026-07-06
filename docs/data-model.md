@@ -72,3 +72,18 @@ Component scores:
 - condition_confidence_score
 - market_spread_score
 - source_freshness_score
+
+## Operations
+
+### ingestion_runs
+One row per ingestion attempt, written by the `/api/ingest/*` routes (and readable through `GET /api/sources/status` as each adapter's `lastRun`). Append-only; the latest row per `source_id` is the source's freshness signal.
+
+Key fields:
+- project_tag
+- source_id (adapter id, e.g. `pokemon-tcg`, `manual-csv`, or the snapshot `source` for `/api/ingest/market-snapshot`)
+- status (`success`, `error`, or `partial`)
+- started_at / finished_at
+- inserted / updated / skipped (row counts for the run)
+- error_message (populated for `error` and `partial` runs; never contains secret values)
+
+Reads go through the `poke_ingestion_runs` view or filter `project_tag = 'POKE'`. Writes happen server-side only via the service-role client; ingest routes are gated by the `x-pokehub-ingest-token` header matching `POKEHUB_INGEST_TOKEN`.
