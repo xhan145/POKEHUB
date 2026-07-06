@@ -42,8 +42,8 @@ From the `poke_sets` view. Response: `{ data: SetObject[], page, pageSize, count
 `200 { data: SetObject }` or `404 { error: "Set not found" }`.
 
 ### `GET /api/v1/prices/{cardId}` (POKEHUB extension)
-Full snapshot history for a card, newest first, max 100 rows:
-`{ data: { cardId, snapshots: [{ source, observedAt, low, mid, high, market, directLow, confidenceScore }] }, count, totalCount }`. `404` if the card id doesn't exist; `200` with empty snapshots if the card exists but has none.
+Full snapshot history for a card, newest first, max 100 rows, in the standard list envelope:
+`{ data: [{ source, observedAt, low, mid, high, market, directLow, confidenceScore }], page, pageSize, count, totalCount }`. `404` if the card id doesn't exist; `200` with empty `data` if the card exists but has no snapshots.
 
 ### `GET /api/v1`
 Index + health: `{ data: { name: "POKEHUB API", version: "v1", endpoints: [...], cards: n, snapshots: n, lastIngest: iso|null } }`. Counts via head-count queries on `poke_cards`/`poke_market_snapshots`; `lastIngest` = newest `poke_ingestion_runs.started_at` (null if none readable).
