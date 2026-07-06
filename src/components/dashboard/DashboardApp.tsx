@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { MarketArcade } from "@/components/dashboard/MarketArcade";
 import { SkeletonPanel } from "@/components/pixel/atoms";
@@ -15,8 +15,8 @@ import {
   IconRadar,
   IconSatellite
 } from "@/components/pixel/icons";
+import type { LiveCard } from "@/lib/api-v1/card-mapper";
 import type {
-  CardIdentity,
   EnvReadiness,
   LiveOverview,
   MsrpProduct,
@@ -71,19 +71,22 @@ const overflowTabs = tabs.slice(5);
 
 export function DashboardApp({
   products,
-  cards,
+  liveCards,
+  cardTotal,
   portfolio,
   env,
   live
 }: {
   products: MsrpProduct[];
-  cards: CardIdentity[];
+  liveCards: LiveCard[];
+  cardTotal: number;
   portfolio: PortfolioItem[];
   env: EnvReadiness;
   live: LiveOverview | null;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("arcade");
   const [moreOpen, setMoreOpen] = useState(false);
+  const cards = useMemo(() => liveCards.map((c) => c.identity), [liveCards]);
 
   const selectTab = (tabId: TabId) => {
     setActiveTab(tabId);
@@ -129,7 +132,7 @@ export function DashboardApp({
               <MarketArcade products={products} cards={cards} env={env} live={live} />
             )}
             {activeTab === "sealed" && <SealedDex products={products} />}
-            {activeTab === "cards" && <CardValueLab cards={cards} />}
+            {activeTab === "cards" && <CardValueLab initialCards={liveCards} totalCount={cardTotal} />}
             {activeTab === "radar" && <SignalRadar products={products} cards={cards} />}
             {activeTab === "portfolio" && <PixelPortfolio items={portfolio} />}
             {activeTab === "control" && <ControlCenter />}

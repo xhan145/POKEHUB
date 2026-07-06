@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { CardOrbitGrid } from "@/components/three/CardOrbitGrid";
 import { CardFlip } from "@/components/three/CardFlip";
-import { EmptyState, EstimateTag, Money, SectionHeader } from "@/components/pixel/atoms";
+import { EmptyState, EstimateTag, Money, SectionHeader, SkeletonPanel } from "@/components/pixel/atoms";
+import type { LiveCard } from "@/lib/api-v1/card-mapper";
 import { getDerivedCardStats } from "@/lib/derived-stats";
-import type { CardIdentity } from "@/types/pokehub";
+import { useCardsSearch } from "@/lib/use-cards-search";
 
 const minScoreOptions = ["ALL", "60+", "75+", "90+"] as const;
 type MinScoreOption = (typeof minScoreOptions)[number];
@@ -18,32 +19,59 @@ const MIN_SCORE_THRESHOLD: Record<MinScoreOption, number> = {
   "90+": 90
 };
 
-export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
-  const [search, setSearch] = useState("");
-  const [rarity, setRarity] = useState("ALL");
-  const [setName, setSetName] = useState("ALL");
+const rarityOptions = [
+  "ALL",
+  "Common",
+  "Uncommon",
+  "Rare",
+  "Rare Holo",
+  "Ultra Rare",
+  "Secret Rare",
+  "Special Illustration Rare",
+  "Illustration Rare",
+  "Double Rare",
+  "Hyper Rare"
+];
+
+const PAGE_SIZE = 24;
+
+const pagerButtonClass =
+  "min-h-[44px] min-w-[44px] cursor-pointer border-2 border-emerald-400/50 bg-black/40 px-4 font-terminal text-xs font-black text-emerald-100 transition-colors hover:border-yellow-300/80 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-emerald-400/50";
+
+export function CardValueLab({
+  initialCards,
+  totalCount
+}: {
+  initialCards: LiveCard[];
+  totalCount: number;
+}) {
+  const { state, query, setQuery, rarity, setRarity, setName, setSetName, setPage } =
+    useCardsSearch({ cards: initialCards, totalCount });
   const [minScore, setMinScore] = useState<MinScoreOption>("ALL");
+  const [setOptions, setSetOptions] = useState<string[]>([]);
 
-  const rarities = useMemo(
-    () => ["ALL", ...Array.from(new Set(cards.map((card) => card.rarity ?? "Unknown")))],
-    [cards]
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/v1/sets?pageSize=250", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const body = (await response.json()) as { data?: unknown };
+        const names = (Array.isArray(body.data) ? body.data : [])
+          .map((row) =>
+            row !== null && typeof row === "object" ? (row as { name?: unknown }).name : undefined
+          )
+          .filter((name): name is string => typeof name === "string" && name.length > 0)
+          .sort((a, b) => a.localeCompare(b));
+        setSetOptions(names);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  const visible = state.cards.filter(
+    (card) => getDerivedCardStats(card.identity).signalScore >= MIN_SCORE_THRESHOLD[minScore]
   );
-
-  const sets = useMemo(
-    () => ["ALL", ...Array.from(new Set(cards.map((card) => card.setName)))],
-    [cards]
-  );
-
-  const filtered = cards.filter((card) => {
-    const matchesSearch = `${card.name} ${card.setName} ${card.number} ${card.rarity ?? ""}`
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    const matchesRarity = rarity === "ALL" || (card.rarity ?? "Unknown") === rarity;
-    const matchesSet = setName === "ALL" || card.setName === setName;
-    const matchesScore = getDerivedCardStats(card).signalScore >= MIN_SCORE_THRESHOLD[minScore];
-
-    return matchesSearch && matchesRarity && matchesSet && matchesScore;
-  });
+  const totalPages = Math.max(1, Math.ceil(state.totalCount / PAGE_SIZE));
 
   return (
     <section className="pixel-panel overflow-hidden">
@@ -53,17 +81,18 @@ export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
       <div className="grid gap-3 border-b border-white/10 bg-black/20 p-4 md:grid-cols-4">
         <input
           className="pixel-input"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search cards, sets, rarities"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search cards by name"
         />
         <select className="pixel-input" value={rarity} onChange={(event) => setRarity(event.target.value)}>
-          {rarities.map((item) => (
+          {rarityOptions.map((item) => (
             <option key={item}>{item}</option>
           ))}
         </select>
         <select className="pixel-input" value={setName} onChange={(event) => setSetName(event.target.value)}>
-          {sets.map((item) => (
+          <option>ALL</option>
+          {setOptions.map((item) => (
             <option key={item}>{item}</option>
           ))}
         </select>
@@ -80,42 +109,44 @@ export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
         </select>
       </div>
 
-      {cards.length === 0 ? (
-        <EmptyState title="No cards ingested yet" body="Run npm run ingest:pokemon after Supabase credentials are configured." />
+      {state.status === "loading" ? (
+        <div className="p-4">
+          <SkeletonPanel lines={8} />
+        </div>
       ) : (
         <>
-          {filtered.length > 0 && (
+          {visible.length > 0 && (
             <div className="p-4">
               <CardOrbitGrid>
-                {filtered.map((card) => {
-                  const stats = getDerivedCardStats(card);
+                {visible.map((card) => {
+                  const stats = getDerivedCardStats(card.identity);
                   return (
                     <CardFlip
-                      key={card.pokemonTcgId}
+                      key={card.identity.pokemonTcgId}
                       glow={stats.glow}
-                      ariaLabel={`${card.name}, flip for market detail`}
+                      ariaLabel={`${card.identity.name}, flip for market detail`}
                       front={
                         <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-black/40 p-3">
-                          {card.imageSmall ? (
+                          {card.identity.imageSmall ? (
                             <img
                               className="h-40 w-28 object-contain"
-                              src={card.imageSmall}
-                              alt={card.name}
+                              src={card.identity.imageSmall}
+                              alt={card.identity.name}
                               loading="lazy"
                             />
                           ) : (
                             <div className="card-back h-40 w-28" style={{ height: "10rem", width: "7rem" }} />
                           )}
-                          <p className="text-center text-xs font-bold text-slate-100">{card.name}</p>
+                          <p className="text-center text-xs font-bold text-slate-100">{card.identity.name}</p>
                         </div>
                       }
                       back={
                         <div className="flex h-full w-full flex-col gap-1.5 bg-black/70 p-3 text-[11px]">
-                          <p className="font-black text-emerald-100">{card.name}</p>
+                          <p className="font-black text-emerald-100">{card.identity.name}</p>
                           <p className="flex items-center justify-between text-slate-300">
                             <span>Raw market</span>
                             <span className="font-mono text-emerald-200">
-                              <Money value={stats.rawMarket} />
+                              <Money value={card.market ?? stats.rawMarket} />
                             </span>
                           </p>
                           <p className="flex items-center justify-between text-slate-300">
@@ -144,9 +175,11 @@ export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
                             <span>Signal</span>
                             <span className="font-mono text-fuchsia-100">{stats.signalScore}</span>
                           </p>
-                          <div className="mt-auto flex justify-end">
-                            <EstimateTag />
-                          </div>
+                          {card.market === null && (
+                            <div className="mt-auto flex justify-end">
+                              <EstimateTag />
+                            </div>
+                          )}
                         </div>
                       }
                     />
@@ -173,23 +206,29 @@ export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((card) => {
-                  const stats = getDerivedCardStats(card);
+                {visible.map((card) => {
+                  const stats = getDerivedCardStats(card.identity);
                   return (
-                    <tr key={card.pokemonTcgId} className="border-t border-white/10 hover:bg-fuchsia-400/5">
+                    <tr key={card.identity.pokemonTcgId} className="border-t border-white/10 hover:bg-fuchsia-400/5">
                       <td className="px-4 py-3">
-                        {card.imageSmall ? (
-                          <img className="h-20 w-14 object-contain" src={card.imageSmall} alt={card.name} loading="lazy" />
+                        {card.identity.imageSmall ? (
+                          <img
+                            className="h-20 w-14 object-contain"
+                            src={card.identity.imageSmall}
+                            alt={card.identity.name}
+                            loading="lazy"
+                          />
                         ) : (
                           <div className="card-back h-20 w-14" />
                         )}
                       </td>
-                      <td className="px-4 py-3 font-bold text-slate-100">{card.name}</td>
-                      <td className="px-4 py-3 text-slate-300">{card.setName}</td>
-                      <td className="px-4 py-3 font-mono text-yellow-100">{card.number}</td>
-                      <td className="px-4 py-3"><span className="rarity-chip">{card.rarity ?? "Unknown"}</span></td>
+                      <td className="px-4 py-3 font-bold text-slate-100">{card.identity.name}</td>
+                      <td className="px-4 py-3 text-slate-300">{card.identity.setName}</td>
+                      <td className="px-4 py-3 font-mono text-yellow-100">{card.identity.number}</td>
+                      <td className="px-4 py-3"><span className="rarity-chip">{card.identity.rarity ?? "Unknown"}</span></td>
                       <td className="px-4 py-3 font-mono text-emerald-200">
-                        <Money value={stats.rawMarket} /> <EstimateTag />
+                        <Money value={card.market ?? stats.rawMarket} />{" "}
+                        {card.market === null && <EstimateTag />}
                       </td>
                       <td className="px-4 py-3 font-mono text-slate-200">
                         <Money value={stats.gradedEstimate} />
@@ -204,9 +243,39 @@ export function CardValueLab({ cards }: { cards: CardIdentity[] }) {
             </table>
           </div>
 
-          {filtered.length === 0 && <EmptyState title="No card matches" body="The lab scanner found no matching card identity." />}
+          {state.status === "error" && (
+            <EmptyState
+              title="Card API unreachable"
+              body="Live card data could not be loaded from /api/v1/cards. Showing the last loaded cards; adjust filters or flip pages to retry."
+            />
+          )}
+          {state.status === "ready" && visible.length === 0 && (
+            <EmptyState title="No card matches" body="The lab scanner found no matching card identity." />
+          )}
         </>
       )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-black/20 p-4">
+        <button
+          type="button"
+          className={pagerButtonClass}
+          onClick={() => setPage(state.page - 1)}
+          disabled={state.page <= 1 || state.status === "loading"}
+        >
+          PREV
+        </button>
+        <p className="text-center font-terminal text-xs text-emerald-100">
+          PAGE {state.page} / {totalPages} - {state.totalCount.toLocaleString("en-US")} CARDS TRACKED
+        </p>
+        <button
+          type="button"
+          className={pagerButtonClass}
+          onClick={() => setPage(state.page + 1)}
+          disabled={state.page >= totalPages || state.status === "loading"}
+        >
+          NEXT
+        </button>
+      </div>
     </section>
   );
 }

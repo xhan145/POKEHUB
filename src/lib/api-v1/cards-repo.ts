@@ -98,6 +98,43 @@ export async function searchCards(
   return { ok: true, value: { rows: (data ?? []) as unknown as CardRow[], totalCount: count ?? 0 } };
 }
 
+export async function searchCardObjects(
+  params: CardsParams
+): Promise<RepoResult<{ cards: Record<string, unknown>[]; totalCount: number }>> {
+  const result = await searchCards(params);
+  if (!result.ok) return result;
+  const { rows, totalCount } = result.value;
+
+  const latestByCard = new Map<string, SnapshotRow>();
+  const ids = rows
+    .map((row) => row.pokemon_tcg_id)
+    .filter((id): id is string => id !== null);
+
+  if (ids.length > 0) {
+    const client = getAnonClient();
+    if (!client) return { ok: false, error: CLIENT_UNAVAILABLE };
+
+    const { data, error } = await client
+      .from("poke_market_snapshots")
+      .select(SNAPSHOT_COLUMNS)
+      .eq("item_kind", "card")
+      .in("item_ref", ids)
+      .order("observed_at", { ascending: false });
+    if (error) return { ok: false, error: error.message };
+
+    for (const snapshot of (data ?? []) as unknown as SnapshotRow[]) {
+      if (!latestByCard.has(snapshot.item_ref)) {
+        latestByCard.set(snapshot.item_ref, snapshot);
+      }
+    }
+  }
+
+  const cards = rows.map((row) =>
+    toCardObject(row, row.pokemon_tcg_id ? (latestByCard.get(row.pokemon_tcg_id) ?? null) : null)
+  );
+  return { ok: true, value: { cards, totalCount } };
+}
+
 export async function getCardById(id: string): Promise<RepoResult<CardRow | null>> {
   const client = getAnonClient();
   if (!client) return { ok: false, error: CLIENT_UNAVAILABLE };
