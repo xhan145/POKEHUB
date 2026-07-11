@@ -84,6 +84,19 @@ export function IconGear(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconConstellation(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <IconSvg {...props}>
+      <path d="M4 6l6 4 5-3 5 5" />
+      <circle cx="4" cy="6" r="1.4" />
+      <circle cx="10" cy="10" r="1.4" />
+      <circle cx="15" cy="7" r="1.4" />
+      <circle cx="20" cy="12" r="1.4" />
+      <circle cx="8" cy="18" r="1.4" />
+    </IconSvg>
+  );
+}
+
 export function IconMore(props: React.SVGProps<SVGSVGElement>) {
   return (
     <IconSvg {...props}>

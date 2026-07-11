@@ -9,6 +9,7 @@ import {
   IconArcade,
   IconBox,
   IconCard,
+  IconConstellation,
   IconFolder,
   IconGear,
   IconMore,
@@ -47,8 +48,21 @@ const SettingsPanel = dynamic(
   () => import("@/components/dashboard/SettingsPanel").then((mod) => mod.SettingsPanel),
   { loading: () => <SkeletonPanel lines={8} /> }
 );
+// ssr:false keeps `three` (the WebGL engine) out of the initial/server bundle.
+const ConstellationModule = dynamic(
+  () => import("./ConstellationModule").then((mod) => mod.ConstellationModule),
+  { ssr: false, loading: () => <SkeletonPanel lines={10} /> }
+);
 
-type TabId = "arcade" | "sealed" | "cards" | "radar" | "portfolio" | "control" | "settings";
+type TabId =
+  | "arcade"
+  | "sealed"
+  | "cards"
+  | "radar"
+  | "portfolio"
+  | "constellation"
+  | "control"
+  | "settings";
 
 type TabDef = {
   id: TabId;
@@ -62,6 +76,7 @@ const tabs: TabDef[] = [
   { id: "cards", label: "Cards", icon: IconCard },
   { id: "radar", label: "Radar", icon: IconRadar },
   { id: "portfolio", label: "Portfolio", icon: IconFolder },
+  { id: "constellation", label: "Constellation", icon: IconConstellation },
   { id: "control", label: "Control Center", icon: IconSatellite },
   { id: "settings", label: "Settings", icon: IconGear }
 ];
@@ -135,6 +150,7 @@ export function DashboardApp({
             {activeTab === "cards" && <CardValueLab initialCards={liveCards} totalCount={cardTotal} />}
             {activeTab === "radar" && <SignalRadar products={products} cards={cards} />}
             {activeTab === "portfolio" && <PixelPortfolio items={portfolio} />}
+            {activeTab === "constellation" && <ConstellationModule />}
             {activeTab === "control" && <ControlCenter />}
             {activeTab === "settings" && <SettingsPanel env={env} />}
           </div>

@@ -27,6 +27,19 @@ Built entirely from `transform`/`opacity` CSS (`src/styles/globals.css`) driven 
 
 All motion respects `prefers-reduced-motion: reduce` â€” animations and transitions are disabled and cards render in their resting/flipped state instantly (see the reduced-motion block in `src/styles/globals.css`).
 
+## Constellation
+
+The **Constellation** tab (More sheet) renders every tracked card as a WebGL galaxy, grouped into energy-type clusters. It uses a vendored 3D engine under `src/lib/constellation/{core,react,providers,encodings}` (copied verbatim, never modified) fed by POKEHUB-authored glue: `src/lib/constellation/card-source.ts` maps the payload to the engine's node tree, `src/lib/api-v1/constellation-repo.ts` + `GET /api/v1/constellation` serve it, and `src/components/dashboard/ConstellationModule.tsx` renders it.
+
+Each orb is one card, and the visual channels encode market/trust data:
+
+- **Color = energy type** â€” canonical TCG palette (`TYPE_COLOR`); Trainer/Energy/Colorless become their own galaxies, unknown types fall back to `Other`.
+- **Size = price** â€” log-scaled mass `clamp(log10(price+1)/3, 0.05, 1)` so cheap cards stay visible and blue-chips dominate; unpriced cards sit at the `0.05` floor.
+- **Glow = trust** â€” brighter for fresher/verified pricing (`VERIFIED` â†’ `NONE`).
+- **Ring = stale/unverified** â€” an amber warning ring on `STALE` cards, a red error ring on `NONE` (no price data).
+
+Clicking a galaxy drills into its cards; clicking a card opens the detail drawer (image + price + trust tier). The tab is lazy-loaded with `next/dynamic({ ssr:false })` so `three` never enters the initial bundle. If WebGL is unavailable or `prefers-reduced-motion: reduce` is set, it falls back to a static grid of energy-type chips with counts (never crashes).
+
 ## Run locally
 
 ```bash

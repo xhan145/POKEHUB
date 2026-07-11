@@ -220,3 +220,34 @@ grant select on public.poke_sets to anon, authenticated;
 --                     when confidence_score = 68 then 'cardmarket'
 --                     else source end
 --   where project_tag = 'POKE' and source = 'pokemon_tcg_api';
+
+-- Migration pokehub_card_types: energy types backfilled by the ingest worker
+-- (src/workers/ingest-pokemon-tcg.ts now requests + stores `types`). Idempotent.
+alter table public.cards add column if not exists types text[] not null default '{}';
+
+-- Migration pokehub_constellation_view: per-card latest price per source + energy
+-- type, for the Constellation viz. `type` falls back to the supertype pseudo-type
+-- (Trainer/Energy) or Colorless when the card has no energy types.
+create or replace view public.poke_card_constellation
+with (security_invoker = true) as
+with latest as (
+  select distinct on (item_ref, source) item_ref, source, market, observed_at
+  from public.market_snapshots
+  where project_tag = 'POKE' and item_kind = 'card' and market is not null
+  order by item_ref, source, observed_at desc
+)
+select
+  c.pokemon_tcg_id as id,
+  c.name,
+  c.rarity,
+  c.set_name,
+  coalesce(nullif(c.types[1], ''),
+    case c.supertype when 'Trainer' then 'Trainer' when 'Energy' then 'Energy' else 'Colorless' end) as type,
+  max(l.market) filter (where l.source = 'tcgplayer')  as market_tcgplayer,
+  max(l.market) filter (where l.source = 'cardmarket')  as market_cardmarket,
+  max(l.observed_at) as newest_observed
+from public.cards c
+left join latest l on l.item_ref = c.pokemon_tcg_id
+where c.project_tag = 'POKE'
+group by c.pokemon_tcg_id, c.name, c.rarity, c.set_name, c.types, c.supertype;
+grant select on public.poke_card_constellation to anon, authenticated;

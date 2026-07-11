@@ -26,6 +26,7 @@ const CardSchema = z.object({
   artist: z.string().optional(),
   supertype: z.string().optional(),
   subtypes: z.array(z.string()).optional(),
+  types: z.array(z.string()).optional(),
   images: z
     .object({
       small: z.string().optional(),
@@ -85,6 +86,7 @@ function toCardRow(card: PokemonTcgCard) {
     artist: card.artist ?? null,
     supertype: card.supertype ?? null,
     subtypes: card.subtypes ?? [],
+    types: card.types ?? [],
     image_small: card.images?.small ?? null,
     image_large: card.images?.large ?? null,
     raw_json: card,
@@ -152,7 +154,7 @@ async function fetchCardsPage(page: number, pageSize: number, query: string) {
   url.searchParams.set("orderBy", "-set.releaseDate");
   url.searchParams.set(
     "select",
-    "id,name,set,number,rarity,artist,supertype,subtypes,images,tcgplayer,cardmarket"
+    "id,name,set,number,rarity,artist,supertype,subtypes,types,images,tcgplayer,cardmarket"
   );
   if (query) url.searchParams.set("q", query);
 
@@ -186,6 +188,7 @@ export async function ingestPokemonTcgCards() {
   const maxPages = getArgNumber("maxPages", 1);
   const query = getArgString("q", "");
   const delayMs = getArgNumber("delayMs", 0);
+  const skipSnapshots = process.argv.includes("--skipSnapshots");
 
   console.log(
     `Pokemon TCG API ingest starting for project_tag=${POKEHUB_PROJECT_TAG}; pageSize=${pageSize}; maxPages=${maxPages}.`
@@ -210,7 +213,7 @@ export async function ingestPokemonTcgCards() {
         .upsert(cardRows, { onConflict: "project_tag,pokemon_tcg_id" });
       if (cardResult.error) throw new Error(`Card upsert failed: ${cardResult.error.message}`);
 
-      if (snapshotRows.length > 0) {
+      if (!skipSnapshots && snapshotRows.length > 0) {
         const snapshotResult = await supabase.from("market_snapshots").insert(snapshotRows);
         if (snapshotResult.error) {
           throw new Error(`Market snapshot insert failed: ${snapshotResult.error.message}`);
@@ -218,9 +221,10 @@ export async function ingestPokemonTcgCards() {
       }
     }
 
+    const wroteSnapshots = supabase && !skipSnapshots ? snapshotRows.length : 0;
     upsertedCards += cardRows.length;
-    insertedSnapshots += snapshotRows.length;
-    console.log(`Page ${page}: processed ${cardRows.length} cards and ${snapshotRows.length} price snapshots.`);
+    insertedSnapshots += wroteSnapshots;
+    console.log(`Page ${page}: processed ${cardRows.length} cards and ${wroteSnapshots} price snapshots.`);
 
     if (payload.page * payload.pageSize >= payload.totalCount || payload.count === 0) {
       break;
