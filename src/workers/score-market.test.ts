@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  anticipationTier,
   cardValueSignalScore,
   clampScore,
   dataConfidenceScore,
@@ -10,6 +11,7 @@ import {
   scoreLiquidity,
   scoreSealedProductSignal,
   scoreSourceFreshness,
+  scoreAnticipation,
   scoreSpreadRisk,
   sealedProductSignalScore,
   valueSignalScore
@@ -99,4 +101,27 @@ test("score aliases reference the existing scoring functions", () => {
   assert.equal(scoreCardValueSignal, cardValueSignalScore);
   assert.equal(scoreSealedProductSignal, sealedProductSignalScore);
   assert.equal(scoreDataConfidence, dataConfidenceScore);
+});
+
+test("scoreAnticipation blends hype, market pressure, and confidence with defaults", () => {
+  assert.equal(
+    scoreAnticipation({ hype: { franchiseWeight: 100, scarcityRisk: 100, nostalgiaFactor: 100 }, marketPressure: 80, dataConfidence: 90 }),
+    0.6 * 100 + 0.25 * 80 + 0.15 * 90
+  );
+  assert.equal(scoreAnticipation({ hype: {} }), 0.6 * 0 + 0.25 * 40 + 0.15 * 30);
+  assert.equal(scoreAnticipation({ hype: { franchiseWeight: 90 } }), 0.6 * (90 / 3) + 0.25 * 40 + 0.15 * 30);
+  assert.equal(
+    scoreAnticipation({ hype: { franchiseWeight: 500, scarcityRisk: 500, nostalgiaFactor: 500 }, marketPressure: 500, dataConfidence: 500 }),
+    100
+  );
+});
+
+test("anticipationTier maps score thresholds", () => {
+  assert.equal(anticipationTier(85), "GRAIL");
+  assert.equal(anticipationTier(84.9), "HOT");
+  assert.equal(anticipationTier(70), "HOT");
+  assert.equal(anticipationTier(69.9), "WARM");
+  assert.equal(anticipationTier(50), "WARM");
+  assert.equal(anticipationTier(49.9), "WATCH");
+  assert.equal(anticipationTier(0), "WATCH");
 });

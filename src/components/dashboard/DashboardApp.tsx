@@ -8,6 +8,7 @@ import { SkeletonPanel } from "@/components/pixel/atoms";
 import {
   IconArcade,
   IconBox,
+  IconCalendar,
   IconCard,
   IconConstellation,
   IconFolder,
@@ -53,6 +54,10 @@ const ConstellationModule = dynamic(
   () => import("./ConstellationModule").then((mod) => mod.ConstellationModule),
   { ssr: false, loading: () => <SkeletonPanel lines={10} /> }
 );
+const ReleaseRadar = dynamic(
+  () => import("@/components/dashboard/ReleaseRadar").then((mod) => mod.ReleaseRadar),
+  { loading: () => <SkeletonPanel lines={10} /> }
+);
 
 type TabId =
   | "arcade"
@@ -61,6 +66,7 @@ type TabId =
   | "radar"
   | "portfolio"
   | "constellation"
+  | "releases"
   | "control"
   | "settings";
 
@@ -77,6 +83,7 @@ const tabs: TabDef[] = [
   { id: "radar", label: "Radar", icon: IconRadar },
   { id: "portfolio", label: "Portfolio", icon: IconFolder },
   { id: "constellation", label: "Constellation", icon: IconConstellation },
+  { id: "releases", label: "Release Radar", icon: IconCalendar },
   { id: "control", label: "Control Center", icon: IconSatellite },
   { id: "settings", label: "Settings", icon: IconGear }
 ];
@@ -151,6 +158,7 @@ export function DashboardApp({
             {activeTab === "radar" && <SignalRadar products={products} cards={cards} />}
             {activeTab === "portfolio" && <PixelPortfolio items={portfolio} />}
             {activeTab === "constellation" && <ConstellationModule />}
+            {activeTab === "releases" && <ReleaseRadar />}
             {activeTab === "control" && <ControlCenter />}
             {activeTab === "settings" && <SettingsPanel env={env} />}
           </div>

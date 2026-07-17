@@ -127,6 +127,40 @@ export const scoreCardValueSignal: typeof cardValueSignalScore = cardValueSignal
 export const scoreSealedProductSignal: typeof sealedProductSignalScore = sealedProductSignalScore;
 export const scoreDataConfidence: typeof dataConfidenceScore = dataConfidenceScore;
 
+export type AnticipationHypeInputs = {
+  franchiseWeight?: number;
+  scarcityRisk?: number;
+  nostalgiaFactor?: number;
+};
+
+export function scoreAnticipation(input: {
+  hype: AnticipationHypeInputs;
+  marketPressure?: number;
+  dataConfidence?: number;
+}) {
+  // Missing hype inputs count as 0 so an empty judgment call never inflates the score.
+  const hypeAverage =
+    (clampScore(input.hype.franchiseWeight) +
+      clampScore(input.hype.scarcityRisk) +
+      clampScore(input.hype.nostalgiaFactor)) /
+    3;
+
+  return clampScore(
+    0.6 * hypeAverage +
+      // Neutral defaults: unknown market pressure sits slightly below midline,
+      // unknown confidence lower still, so unbacked hype stays honest.
+      0.25 * clampScore(input.marketPressure ?? 40) +
+      0.15 * clampScore(input.dataConfidence ?? 30)
+  );
+}
+
+export function anticipationTier(score: number): "GRAIL" | "HOT" | "WARM" | "WATCH" {
+  if (score >= 85) return "GRAIL";
+  if (score >= 70) return "HOT";
+  if (score >= 50) return "WARM";
+  return "WATCH";
+}
+
 function runExample() {
   console.log(
     "Example value signal:",

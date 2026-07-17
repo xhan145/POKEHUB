@@ -251,3 +251,16 @@ left join latest l on l.item_ref = c.pokemon_tcg_id
 where c.project_tag = 'POKE'
 group by c.pokemon_tcg_id, c.name, c.rarity, c.set_name, c.types, c.supertype;
 grant select on public.poke_card_constellation to anon, authenticated;
+
+-- Set release dates for the Release Radar cadence strip: one row per set with
+-- its releaseDate lifted out of the ingested card payloads.
+create or replace view public.poke_set_dates
+with (security_invoker = true) as
+select distinct on (set_id)
+  set_id,
+  set_name as name,
+  (raw_json->'set'->>'releaseDate') as release_date
+from public.cards
+where project_tag = 'POKE' and set_id is not null and raw_json->'set' ? 'releaseDate'
+order by set_id;
+grant select on public.poke_set_dates to anon, authenticated;

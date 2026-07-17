@@ -106,3 +106,13 @@ export function IconMore(props: React.SVGProps<SVGSVGElement>) {
     </IconSvg>
   );
 }
+
+export function IconCalendar(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <IconSvg {...props}>
+      <rect x="3" y="5" width="18" height="16" />
+      <path d="M3 9h18M8 3v4M16 3v4" />
+      <circle cx="12" cy="15" r="1.4" />
+    </IconSvg>
+  );
+}

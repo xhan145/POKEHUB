@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "id": "30th-celebration",
+      "name": "Pokémon TCG: 30th Celebration",
+      "kind": "collection",
+      "date": null,
+      "msrpTotal": 566.78,
+      "products": [
+        "Pokémon TCG: 30th Celebration Ultra-Premium Collection",
+        "Pokémon TCG: 30th Celebration Elite Trainer Box",
+        "Pokémon TCG: 30th Celebration Ditto Premium Collection",
+        "Pokémon TCG: 30th Celebration Mew Figure Collection",
+        "Pokémon TCG: 30th Celebration Mewtwo Figure Collection",
+        "Pokémon TCG: 30th Celebration Booster Bundle",
+        "Pokémon TCG: 30th Celebration Binder Collection",
+        "Pokémon TCG: 30th Celebration Poster Collection",
+        "Pokémon TCG: 30th Celebration Battle Deck (Espeon ex)",
+        "Pokémon TCG: 30th Celebration Battle Deck (Umbreon ex)",
+        "Pokémon TCG: 30th Celebration Tech Sticker Collection",
+        "Pokémon TCG: 30th Celebration Knock Out Collection",
+        "Pokémon TCG: 30th Celebration Mini Tin",
+        "Pokémon TCG: 30th Celebration Greninja ex Tin",
+        "Pokémon TCG: 30th Celebration Sylveon ex Tin",
+        "Pokémon TCG: 30th Celebration Greninja ex Box",
+        "Pokémon TCG: 30th Celebration Sylveon ex Box"
+      ],
+      "hype": {
+        "franchiseWeight": 100,
+        "scarcityRisk": 90,
+        "nostalgiaFactor": 100
+      },
+      "notes": "30th-anniversary flagship line. Street date not yet announced - tracked as TBA until official."
+    }
+  ]
+}

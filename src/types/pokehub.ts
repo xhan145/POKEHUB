@@ -192,3 +192,33 @@ export type LiveOverview = {
   snapshotCount: number;
   lastSync: string | null;
 };
+
+export type ReleaseKind = "set" | "sealed" | "collection";
+
+export type ReleaseHypeInputs = {
+  franchiseWeight?: number;
+  scarcityRisk?: number;
+  nostalgiaFactor?: number;
+};
+
+export type ReleaseSeedEntry = {
+  id: string;
+  name: string;
+  kind: ReleaseKind;
+  date: string | null;
+  msrpTotal?: number;
+  products?: string[];
+  announcementUrl?: string;
+  hype: ReleaseHypeInputs;
+  notes?: string;
+};
+
+export type AnticipationTier = "GRAIL" | "HOT" | "WARM" | "WATCH";
+
+export type Anticipation = { score: number; tier: AnticipationTier };
+
+export type UpcomingRelease = ReleaseSeedEntry & {
+  anticipation: Anticipation;
+  daysUntil: number | null;
+  released: boolean;
+};

@@ -40,6 +40,21 @@ Each orb is one card, and the visual channels encode market/trust data:
 
 Clicking a galaxy drills into its cards; clicking a card opens the detail drawer (image + price + trust tier). The tab is lazy-loaded with `next/dynamic({ ssr:false })` so `three` never enters the initial bundle. If WebGL is unavailable or `prefers-reduced-motion: reduce` is set, it falls back to a static grid of energy-type chips with counts (never crashes).
 
+## Release Radar
+
+The **Release Radar** tab (More sheet) is the drop calendar: upcoming releases with an
+**anticipation score** (0-100 EST + tier GRAIL/HOT/WARM/WATCH), countdowns, a
+recent-set cadence strip, and a per-release **Save for this** marker (stored only in
+your browser's localStorage - no accounts).
+
+- Upcoming releases live in the curated seed `src/data/releases-seed.json` - edit it
+  and push as street dates get announced (unannounced = `"date": null` -> shown TBA;
+  dates are never invented).
+- Anticipation blends your hype inputs (60%) with computed preorder market pressure
+  (25%) and data confidence (15%) via `scoreAnticipation()` - always labeled EST.
+- Set-release history comes from the ingested catalog (`poke_set_dates` view).
+- Served publicly at `GET /api/v1/releases`.
+
 ## Run locally
 
 ```bash
