@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo } from "react";
 
 import { EmptyState, Money, SectionHeader, SkeletonPanel } from "@/components/pixel/atoms";
@@ -7,6 +8,12 @@ import { groupByMonth } from "@/lib/releases";
 import { useReleases } from "@/lib/use-releases";
 import { useSavingFor } from "@/lib/use-saving-for";
 import type { AnticipationTier, UpcomingRelease } from "@/types/pokehub";
+
+// ssr:false keeps `three` (the WebGL engine) out of the initial/server bundle.
+const ReleaseConstellation = dynamic(
+  () => import("@/components/dashboard/ReleaseConstellation").then((mod) => mod.ReleaseConstellation),
+  { ssr: false, loading: () => <SkeletonPanel lines={6} /> }
+);
 
 const TIER_CLASS: Record<AnticipationTier, string> = {
   GRAIL: "border-fuchsia-400/80 bg-fuchsia-900/40 text-fuchsia-100",
@@ -149,6 +156,13 @@ export function ReleaseRadar() {
   return (
     <section className="space-y-5">
       <SectionHeader kicker="RELEASE RADAR" title="Upcoming drops, anticipation, and what you're saving for" />
+
+      <ReleaseConstellation
+        upcoming={state.upcoming}
+        recentSets={state.recentSets}
+        savingIds={savingFor.ids}
+        onToggleSaving={savingFor.toggle}
+      />
 
       {savedReleases.length > 0 && (
         <div className="pixel-panel border-yellow-300/60 p-4" aria-live="polite">

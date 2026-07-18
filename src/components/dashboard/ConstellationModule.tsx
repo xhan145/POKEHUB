@@ -17,22 +17,10 @@ import {
   type ConstellationCard
 } from "@/lib/constellation/card-source";
 import type { SelectPayload } from "@/lib/constellation/core/constellation";
-import type { Theme } from "@/lib/constellation/core/types";
+import { POKE_THEME } from "@/lib/constellation/poke-theme";
 import { HierarchicalAggregator, buildTreeSource } from "@/lib/constellation/providers";
 import { ConstellationView } from "@/lib/constellation/react/ConstellationView";
 import { isWebglAvailable, useConstellationData } from "@/lib/use-constellation-data";
-
-// Dark background matching the app shell; emerald primary / gold secondary accents.
-const POKE_THEME: Theme = {
-  background: "#08070d",
-  accentPrimary: "#34d399",
-  accentSecondary: "#fbbf24",
-  gridPrimary: "#34d399",
-  gridSecondary: "#fbbf24",
-  defaultGradient: ["#0b1220", "#0e7490", "#6ee7b7"],
-  anomalyWarn: "#f59e0b",
-  anomalyError: "#ef4444"
-};
 
 function colorForType(type: string): string {
   return TYPE_COLOR[type] ?? TYPE_COLOR.Other;

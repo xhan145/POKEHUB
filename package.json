@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/lib/project-tag.test.ts src/workers/score-market.test.ts src/lib/sources/source-registry.test.ts src/lib/sources/manual-csv.test.ts src/lib/sources/throttle.test.ts src/lib/sources/ingest-schemas.test.ts src/lib/derived-stats.test.ts src/lib/api-v1/query.test.ts src/lib/api-v1/card-mapper.test.ts src/lib/api-v1/trust-engine.test.ts src/lib/constellation/card-source.test.ts src/lib/releases.test.ts",
+    "test": "node --import tsx --test src/lib/project-tag.test.ts src/workers/score-market.test.ts src/lib/sources/source-registry.test.ts src/lib/sources/manual-csv.test.ts src/lib/sources/throttle.test.ts src/lib/sources/ingest-schemas.test.ts src/lib/derived-stats.test.ts src/lib/api-v1/query.test.ts src/lib/api-v1/card-mapper.test.ts src/lib/api-v1/trust-engine.test.ts src/lib/constellation/card-source.test.ts src/lib/releases.test.ts src/lib/constellation/release-source.test.ts",
     "ingest:pokemon": "tsx src/workers/ingest-pokemon-tcg.ts",
     "ingest:msrp": "tsx src/workers/ingest-msrp.ts",
     "score": "tsx src/workers/score-market.ts"
